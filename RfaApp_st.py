@@ -212,11 +212,12 @@ def display_results():
         """, unsafe_allow_html=True)
     
     with col2:
+        feature_importance_html = "".join([f'<p>{curve}: <strong>{imp:.3f}</strong></p>' 
+                      for curve, imp in zip(results['input_curves'], results['feature_importances'])])
         st.markdown(f"""
         <div class="metric-card">
             <h3>Feature Importances</h3>
-            {''.join([f'<p>{curve}: <strong>{imp:.3f}</strong></p>' 
-                      for curve, imp in zip(results['input_curves'], results['feature_importances'])])
+            {feature_importance_html}
         </div>
         """, unsafe_allow_html=True)
     
