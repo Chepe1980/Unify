@@ -1,17 +1,10 @@
 streamlit
-pyavo
 numpy
-pandas
 matplotlib
-streamlit-bokeh-events
-scipy
-rockphypy
-PyWavelets
-bokeh >=2.4.3
 sklearn
-seaborn
 lasio
 tensorflow
+
 
 
 
