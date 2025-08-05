@@ -291,9 +291,9 @@ def display_results():
     ax3.plot(results['y_true'], results['depth'], 'b-', label='Actual Log', linewidth=1)
     ax3.plot(results['y_pred'], results['depth'], 'r--', label='Predicted Log', linewidth=1)
     ax3.invert_yaxis()
-    ax3.set_xlabel('DT (μs/ft)')
+    ax3.set_xlabel('Target Log (m/s)')
     ax3.set_ylabel('Depth (m)')
-    ax3.set_title('DT Comparison Along Depth')
+    ax3.set_title('Log Comparison Along Depth')
     ax3.legend()
     st.pyplot(fig3)
     
