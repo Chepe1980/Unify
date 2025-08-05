@@ -5,6 +5,8 @@ matplotlib
 sklearn
 lasio
 tensorflow
+io
+
 
 
 
