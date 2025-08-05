@@ -361,7 +361,7 @@ def display_results():
         
         # Add predicted DT
         new_las.add_curve(
-            "DT_PRED",
+            "Log_PRED",
             results['y_pred'].flatten(),
             unit="us/ft",
             descr="Predicted Sonic Log"
