@@ -234,7 +234,7 @@ def display_results():
     fig2, ax2 = plt.subplots(figsize=(8, 8))
     
     # Find SW index for coloring
-    sw_index = next((i for i, curve in enumerate(results['input_curves']) if curve == 'SW' else None), None)
+    sw_index = next((i for i, curve in enumerate(results['input_curves']) if curve == 'SW'), None)
     color_data = results['X_test'][:, sw_index] if sw_index is not None else None
     
     if color_data is not None:
