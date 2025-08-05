@@ -315,43 +315,45 @@ def display_results():
     st.pyplot(fig4)
 
     # Download LAS with predicted DT
-    st.subheader("⬇️ Export Results")
-    if st.button("💾 Download LAS with Predicted DT"):
-        try:
-            # Get original LAS data
-            depth = las['DEPTH']
-            
-            # Create a new LAS file with header info
-            new_las = lasio.LASFile()
-            new_las.well = las.well
-            new_las.curves = las.curves
-            new_las.params = las.params
-            
-            # Create and append predicted DT curve
-            from lasio import CurveItem
-            dt_pred_curve = CurveItem(
-                mnemonic="DT_PRED",
-                unit="us/ft",
-                data=results['y_pred'].flatten(),
-                descr="Predicted Sonic Log (1D CNN)"
-            )
-            new_las.curves.append(dt_pred_curve)
-            
-            # Write to buffer
-            las_buffer = BytesIO()
-            new_las.write(las_buffer)
-            las_buffer.seek(0)
-            
-            # Download button
-            st.download_button(
-                label="⬇️ Download LAS File",
-                data=las_buffer,
-                file_name="predicted_dt.las",
-                mime="application/octet-stream"
-            )
-            st.success("✅ LAS file with predicted DT is ready for download!")
-        except Exception as e:
-            st.error(f"Error generating LAS file: {str(e)}")
+# Download LAS with predicted DT
+st.subheader("⬇️ Export Results")
+if st.button("💾 Download LAS with Predicted DT"):
+    try:
+        # Create a new LAS file with header info
+        new_las = lasio.LASFile()
+        
+        # Copy metadata from original LAS
+        new_las.well = las.well
+        new_las.header = las.header
+        
+        # Add original curves
+        for curve in las.curves:
+            new_las.add_curve(curve.mnemonic, curve.data, unit=curve.unit, descr=curve.descr)
+        
+        # Add predicted DT curve
+        new_las.add_curve(
+            mnemonic="DT_PRED",
+            data=results['y_pred'].flatten(),
+            unit="us/ft",
+            descr="Predicted Sonic Log (1D CNN)"
+        )
+        
+        # Write to binary buffer
+        las_buffer = BytesIO()
+        new_las.write(las_buffer, version=2.0)  # Explicitly set LAS version
+        las_buffer.seek(0)
+        
+        # Download button
+        st.download_button(
+            label="⬇️ Download LAS File",
+            data=las_buffer.getvalue(),  # Use getvalue() for binary data
+            file_name="predicted_dt.las",
+            mime="application/octet-stream"
+        )
+        
+        st.success("✅ LAS file downloaded successfully!")
+    except Exception as e:
+        st.error(f"Error generating LAS file: {str(e)}")
 
 if __name__ == "__main__":
     main()
