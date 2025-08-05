@@ -14,7 +14,7 @@ from io import StringIO, BytesIO
 
 # Configure the app
 st.set_page_config(
-    page_title="DT Prediction with 1D CNN",
+    page_title="Sonic Log Prediction with 1D CNN",
     page_icon="⛏️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -50,7 +50,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def main():
-    st.title("⛏️ Sonic Log (DT) Prediction using 1D CNN")
+    st.title("⛏️ Sonic Log Prediction using 1D CNN")
     st.markdown("""
     This app predicts sonic travel time (DT) from other well log measurements using a 1D Convolutional Neural Network.
     Upload your LAS file and configure the model parameters in the sidebar.
