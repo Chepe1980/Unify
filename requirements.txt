@@ -6,6 +6,8 @@ scikit-learn
 pandas
 rich
 tensorflow
+tensorflow_probability 
+
 
 
 
