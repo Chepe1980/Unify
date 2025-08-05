@@ -8,7 +8,9 @@ rich
 tensorflow
 tensorflow_probability 
 seaborn
-deap
+deap>=1.3.1
+
+
 
 
 
