@@ -1,13 +1,12 @@
-streamlit==1.22.0
-lasio==0.30
-numpy==1.23.5
-matplotlib==3.6.2
-scikit-learn==1.2.0
-pandas==1.5.2
-rich==13.7.0
-markdown-it-py==2.2.0
-mdurl==0.1.2
-Pygments==2.15.1
+streamlit
+lasio
+numpy
+matplotlib
+scikit-learn
+pandas
+rich
+
+
 
 
 
