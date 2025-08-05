@@ -134,8 +134,13 @@ def process_and_train(las, input_curves, target_curve, epochs, batch_size, learn
         try:
             # Extract data
             depth = las['DEPTH']
-            X = np.vstack([las[curve] for curve in input_curves]).T
+            # Ensure all curves exist before stacking
+            X = np.vstack([las[curve] for curve in input_curves if curve in las.keys()]).T
             y = las[target_curve].reshape(-1, 1)
+            
+            # 3. Check for empty data
+            if X.size == 0 or y.size == 0:
+                raise ValueError("Empty data after extraction - check curve selections")
             
             # Handle missing values
             X = np.nan_to_num(X, nan=np.nanmean(X, axis=0))
@@ -304,3 +309,4 @@ def display_results():
 
 if __name__ == "__main__":
     main()
+
