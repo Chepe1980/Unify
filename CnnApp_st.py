@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
-from io import StringIO
+from io import StringIO, BytesIO
 
 # Configure the app
 st.set_page_config(
@@ -60,11 +60,20 @@ def main():
     # Sidebar controls
     with st.sidebar:
         st.header("📊 Data Configuration")
-        uploaded_file = st.file_uploader("Upload LAS file", type=['las'])
+        uploaded_file = st.file_uploader("Upload LAS file", type=['las', 'LAS'])
         
         if uploaded_file:
             try:
-                las = lasio.read(uploaded_file)
+                # Fix: Handle both text and binary LAS files
+                file_contents = uploaded_file.read()
+                try:
+                    # Try reading as text first
+                    las_text = file_contents.decode("utf-8")
+                    las = lasio.read(StringIO(las_text))
+                except:
+                    # Fall back to binary mode if text fails
+                    las = lasio.read(BytesIO(file_contents))
+                
                 available_curves = [curve for curve in las.keys() if curve != 'DEPTH']
                 
                 st.header("⚙️ Model Parameters")
@@ -295,4 +304,3 @@ def display_results():
 
 if __name__ == "__main__":
     main()
-
