@@ -299,7 +299,7 @@ def display_results():
     ax3.plot(results['y_test'], results['depth'], 'b-', label='Actual Log', linewidth=1)
     ax3.plot(results['y_pred'], results['depth'], 'r--', label='Predicted Log', linewidth=1)
     ax3.invert_yaxis()
-    ax3.set_xlabel('DT (μs/ft)')
+    ax3.set_xlabel('Target Sonic Log (μs/ft)')
     ax3.set_ylabel('Depth (m)')
     ax3.set_title('Log Comparison Along Depth')
     ax3.legend()
