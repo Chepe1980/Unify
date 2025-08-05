@@ -1,13 +1,14 @@
 import streamlit as st
 import lasio
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_squared_error
 from io import StringIO, BytesIO
+import seaborn as sns
 
 # Configure the app
 st.set_page_config(
@@ -87,8 +88,9 @@ def main():
                 
                 st.header("⚙️ Model Parameters")
                 n_estimators = st.slider("Number of Trees", 10, 500, 100)
-                max_depth = st.slider("Max Depth", 1, 50, 10)
+                max_depth = st.slider("Max Depth", 1, 30, 10)
                 test_size = st.slider("Test Set Size (%)", 10, 40, 20) / 100
+                random_state = st.number_input("Random State", 0, 100, 42)
                 
                 st.header("📈 Curve Selection")
                 target_curve = st.selectbox("Target Curve (DT)", available_curves, 
@@ -107,7 +109,8 @@ def main():
                     input_curves.append(curve)
                 
                 if st.button("🚀 Train Model", type="primary", use_container_width=True):
-                    process_and_train(las, input_curves, target_curve, n_estimators, max_depth, test_size)
+                    process_and_train(las, input_curves, target_curve, n_estimators, 
+                                    max_depth, test_size, random_state)
             
             except Exception as e:
                 st.error(f"Error reading LAS file: {str(e)}")
@@ -132,41 +135,38 @@ def main():
         except Exception as e:
             st.warning(f"Couldn't display full preview: {str(e)}")
 
-def process_and_train(las, input_curves, target_curve, n_estimators, max_depth, test_size):
+def process_and_train(las, input_curves, target_curve, n_estimators, max_depth, test_size, random_state):
     """Process data and train the model"""
     with st.spinner("🔄 Processing data and training model..."):
         try:
-            # Extract data
-            df = las.df()
-            df.reset_index(inplace=True)
+            # Extract data from DataFrame in session state
+            df = st.session_state.las_df.copy()
             
-            # Drop rows with missing values
+            # Drop rows with missing values in selected curves
             df = df.dropna(subset=input_curves + [target_curve])
             
-            # Define features (X) and target (y)
-            X = df[input_curves]
-            y = df[target_curve]
-            depth = df['DEPTH']
+            if df.empty:
+                raise ValueError("No data remaining after dropping missing values - check curve selections")
             
-            # Split the data into training and testing sets
-            X_train, X_test, y_train, y_test, depth_train, depth_test = train_test_split(
-                X, y, depth, test_size=test_size, random_state=42)
+            # Prepare features and target
+            X = df[input_curves].values
+            y = df[target_curve].values
+            depth = df['DEPTH'].values
+            
+            # Split data (maintaining depth order)
+            split_idx = int(len(X) * (1 - test_size))
+            X_train, X_test = X[:split_idx], X[split_idx:]
+            y_train, y_test = y[:split_idx], y[split_idx:]
+            depth_test = depth[split_idx:]
             
             # Train Random Forest model
             model = RandomForestRegressor(
                 n_estimators=n_estimators,
                 max_depth=max_depth,
-                random_state=42
+                random_state=random_state
             )
             
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Simple progress update (Random Forest doesn't have epochs like neural networks)
-            for i in range(5):
-                progress_bar.progress((i + 1) * 20)
-                status_text.text(f"Training in progress... {((i + 1) * 20)}%")
-                model.fit(X_train, y_train)  # This will actually train the full model each time
+            model.fit(X_train, y_train)
             
             # Predict
             y_pred = model.predict(X_test)
@@ -178,9 +178,9 @@ def process_and_train(las, input_curves, target_curve, n_estimators, max_depth, 
                 'y_pred': y_pred,
                 'depth': depth_test,
                 'X_test': X_test,
-                'model': model,
                 'r2': r2_score(y_test, y_pred),
                 'mse': mean_squared_error(y_test, y_pred),
+                'model': model,
                 'input_curves': input_curves,
                 'target_curve': target_curve,
                 'feature_importances': model.feature_importances_
@@ -212,31 +212,49 @@ def display_results():
         """, unsafe_allow_html=True)
     
     with col2:
-        feature_importance_html = "".join([f'<p>{curve}: <strong>{imp:.3f}</strong></p>' 
-                      for curve, imp in zip(results['input_curves'], results['feature_importances'])])
         st.markdown(f"""
         <div class="metric-card">
             <h3>Feature Importances</h3>
-            {feature_importance_html}
+            {''.join([f'<p>{curve}: <strong>{imp:.4f}</strong></p>' 
+                     for curve, imp in zip(results['input_curves'], results['feature_importances'])])}
         </div>
         """, unsafe_allow_html=True)
+    
+    # Feature importance plot
+    st.subheader("📊 Feature Importances")
+    fig1, ax1 = plt.subplots(figsize=(10, 5))
+    importances = pd.Series(results['feature_importances'], index=results['input_curves'])
+    importances.sort_values().plot(kind='barh', ax=ax1)
+    ax1.set_title('Feature Importances from Random Forest')
+    ax1.set_xlabel('Relative Importance')
+    st.pyplot(fig1)
     
     # Cross plot
     st.subheader("🔄 Prediction vs Actual Cross Plot")
     fig2, ax2 = plt.subplots(figsize=(8, 8))
-    scatter = ax2.scatter(
-        results['y_test'], results['y_pred'],
-        c=results['X_test']['SW'] if 'SW' in results['X_test'].columns else 'blue',
-        cmap='jet_r', alpha=0.6
-    )
+    
+    # Find SW index for coloring
+    sw_index = next((i for i, curve in enumerate(results['input_curves']) if curve == 'SW' else None), None)
+    color_data = results['X_test'][:, sw_index] if sw_index is not None else None
+    
+    if color_data is not None:
+        scatter = ax2.scatter(
+            results['y_test'], results['y_pred'],
+            c=color_data,
+            cmap='jet_r', alpha=0.6,
+            vmin=np.min(color_data),
+            vmax=np.max(color_data)
+        )
+        plt.colorbar(scatter, label='SW')
+    else:
+        ax2.scatter(results['y_test'], results['y_pred'], alpha=0.6)
+    
     ax2.plot([results['y_test'].min(), results['y_test'].max()],
              [results['y_test'].min(), results['y_test'].max()],
              'r--', label='1:1 Line')
     ax2.set_xlabel('Actual DT (μs/ft)')
     ax2.set_ylabel('Predicted DT (μs/ft)')
     ax2.set_title(f'DT Prediction (R² = {results["r2"]:.3f})')
-    if 'SW' in results['X_test'].columns:
-        plt.colorbar(scatter, label='SW')
     ax2.legend()
     st.pyplot(fig2)
     
@@ -252,28 +270,32 @@ def display_results():
     ax3.legend()
     st.pyplot(fig3)
     
-    # Feature importance plot
-    st.subheader("📊 Feature Importances")
-    fig4, ax4 = plt.subplots(figsize=(10, 6))
-    sorted_idx = results['feature_importances'].argsort()
-    ax4.barh(np.array(results['input_curves'])[sorted_idx], 
-            results['feature_importances'][sorted_idx])
-    ax4.set_xlabel('Feature Importance Score')
-    ax4.set_title('Random Forest Feature Importances')
-    st.pyplot(fig4)
-    
     # Hexbin plot
-    st.subheader("📈 Density Plot")
-    fig5 = plt.figure(figsize=(8, 8))
-    hb = plt.hexbin(results['y_test'], results['y_pred'], gridsize=50, cmap='jet_r', bins='log')
+    st.subheader("📈 Density Plot of Predictions")
+    fig4, ax4 = plt.subplots(figsize=(8, 8))
+    hb = ax4.hexbin(results['y_test'], results['y_pred'], gridsize=50, cmap='jet_r', bins='log')
     plt.colorbar(hb, label='Log10 Count')
-    plt.plot([results['y_test'].min(), results['y_test'].max()],
+    ax4.plot([results['y_test'].min(), results['y_test'].max()],
              [results['y_test'].min(), results['y_test'].max()],
              'r--', label='1:1 Line')
-    plt.xlabel('Real DT')
-    plt.ylabel('Predicted DT')
-    plt.title(f'Real vs Predicted DT (R² = {results["r2"]:.4f})')
-    plt.legend()
+    ax4.set_xlabel('Actual DT')
+    ax4.set_ylabel('Predicted DT')
+    ax4.set_title(f'Real vs Predicted DT (R² = {results["r2"]:.4f})')
+    ax4.legend()
+    st.pyplot(fig4)
+    
+    # Pairplot for selected features
+    st.subheader("📊 Feature Relationships")
+    plot_curves = results['input_curves'][:4]  # Show first 4 curves to avoid overcrowding
+    df_plot = pd.DataFrame(results['X_test'], columns=results['input_curves'])
+    df_plot['DT_ACTUAL'] = results['y_test']
+    df_plot['DT_PRED'] = results['y_pred']
+    
+    # Bin DT values for coloring
+    bins = np.linspace(min(results['y_test']), max(results['y_test']), 4)
+    df_plot['DT_BIN'] = np.digitize(results['y_test'], bins)
+    
+    fig5 = sns.pairplot(df_plot, vars=plot_curves, hue='DT_BIN', palette='viridis', diag_kind='hist')
     st.pyplot(fig5)
 
     # Download Section
@@ -282,14 +304,14 @@ def display_results():
     # Create DataFrame with all data
     df = pd.DataFrame({
         'DEPTH': results['depth'],
-        'DT_ACTUAL': results['y_test'],
-        'DT_PREDICTED': results['y_pred'],
+        f'{results["target_curve"]}_ACTUAL': results['y_test'],
+        f'{results["target_curve"]}_PREDICTED': results['y_pred'],
         'RESIDUAL': results['y_test'] - results['y_pred']
     })
     
     # Add input curves
-    for curve in results['input_curves']:
-        df[curve] = results['X_test'][curve]
+    for i, curve in enumerate(results['input_curves']):
+        df[curve] = results['X_test'][:, i]
     
     # CSV Download
     csv_buffer = StringIO()
@@ -320,7 +342,7 @@ def display_results():
         full_pred[test_indices] = results['y_pred']
         
         new_las.add_curve(
-            "DT_PRED",
+            f"{results['target_curve']}_PRED",
             full_pred,
             unit="us/ft",
             descr="Predicted Sonic Log"
