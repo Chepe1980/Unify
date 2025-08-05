@@ -279,9 +279,9 @@ def display_results():
     ax2.plot([results['y_test'].min(), results['y_test'].max()],
              [results['y_test'].min(), results['y_test'].max()],
              'r--', label='1:1 Line')
-    ax2.set_xlabel('Actual DT (μs/ft)')
-    ax2.set_ylabel('Predicted DT (μs/ft)')
-    ax2.set_title(f'DT Prediction (R² = {results["r2"]:.3f})')
+    ax2.set_xlabel('ActualLog (μs/ft)')
+    ax2.set_ylabel('Predicted Log (μs/ft)')
+    ax2.set_title(f'Log Prediction (R² = {results["r2"]:.3f})')
     plt.colorbar(scatter, label='SW')
     ax2.legend()
     st.pyplot(fig2)
@@ -289,12 +289,12 @@ def display_results():
     # Depth plot
     st.subheader("📏 Depth Profile Comparison")
     fig3, ax3 = plt.subplots(figsize=(8, 12))
-    ax3.plot(results['y_test'], results['depth'], 'b-', label='Actual DT', linewidth=1)
-    ax3.plot(results['y_pred'], results['depth'], 'r--', label='Predicted DT', linewidth=1)
+    ax3.plot(results['y_test'], results['depth'], 'b-', label='Actual Log', linewidth=1)
+    ax3.plot(results['y_pred'], results['depth'], 'r--', label='Predicted Log', linewidth=1)
     ax3.invert_yaxis()
-    ax3.set_xlabel('DT (μs/ft)')
+    ax3.set_xlabel('Target Log (μs/ft)')
     ax3.set_ylabel('Depth (m)')
-    ax3.set_title('DT Comparison Along Depth')
+    ax3.set_title('Log Comparison Along Depth')
     ax3.legend()
     st.pyplot(fig3)
     
@@ -360,7 +360,7 @@ def display_results():
         full_pred[test_indices] = results['y_pred'].flatten()
         
         new_las.add_curve(
-            "DT_PRED",
+            "Log_PRED",
             full_pred,
             unit="us/ft",
             descr="Predicted Sonic Log"
@@ -380,7 +380,7 @@ def display_results():
         st.download_button(
             label="📥 Download CSV",
             data=csv_buffer.getvalue(),
-            file_name="dt_predictions.csv",
+            file_name="Log_predictions.csv",
             mime="text/csv",
             use_container_width=True
         )
