@@ -3,8 +3,10 @@ lasio==0.30
 numpy==1.23.5
 matplotlib==3.6.2
 scikit-learn==1.2.0
-tensorflow==2.11.0
+tensorflow-cpu==2.11.0  # Use CPU version for cloud deployment
 pandas==1.5.2
+protobuf==3.20.3  # Specific version to avoid conflicts
+
 
 
 
