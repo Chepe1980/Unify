@@ -254,7 +254,7 @@ def display_results():
              'r--', label='1:1 Line')
     ax2.set_xlabel('Actual Log (m/s)')
     ax2.set_ylabel('Predicted Log (m/s)')
-    ax2.set_title(f'DT Prediction (R² = {results["r2"]:.3f})')
+    ax2.set_title(f'Log Prediction (R² = {results["r2"]:.3f})')
     ax2.legend()
     st.pyplot(fig2)
     
@@ -266,7 +266,7 @@ def display_results():
     ax3.invert_yaxis()
     ax3.set_xlabel('Target Log (m/s)')
     ax3.set_ylabel('Depth (m)')
-    ax3.set_title('DT Comparison Along Depth')
+    ax3.set_title('LogComparison Along Depth')
     ax3.legend()
     st.pyplot(fig3)
     
