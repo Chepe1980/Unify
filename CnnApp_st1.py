@@ -319,27 +319,27 @@ def display_results():
     if st.button("💾 Download LAS with Predicted DT"):
         try:
             # Get original LAS data
-            las_df = las.df()
             depth = las['DEPTH']
             
-            # Create a new LAS file with predicted DT
+            # Create a new LAS file with header info
             new_las = lasio.LASFile()
-            new_las.well.DATE = las.well.DATE if 'DATE' in las.well else "2024-01-01"
-            new_las.well.START = depth[0]
-            new_las.well.STOP = depth[-1]
-            new_las.well.STEP = depth[1] - depth[0] if len(depth) > 1 else 1.0
+            new_las.well = las.well
+            new_las.curves = las.curves
+            new_las.params = las.params
             
-            # Add original curves
-            for curve in las.curves:
-                if curve.mnemonic != 'DEPTH':
-                    new_las.add_curve(curve.mnemonic, las[curve.mnemonic], unit=curve.unit)
+            # Create and append predicted DT curve
+            from lasio import CurveItem
+            dt_pred_curve = CurveItem(
+                mnemonic="DT_PRED",
+                unit="us/ft",
+                data=results['y_pred'].flatten(),
+                descr="Predicted Sonic Log (1D CNN)"
+            )
+            new_las.curves.append(dt_pred_curve)
             
-            # Add predicted DT
-            new_las.add_curve('DT_PRED', results['y_pred'].flatten(), unit='us/ft')
-            
-            # Save to BytesIO buffer
+            # Write to buffer
             las_buffer = BytesIO()
-            new_las.write(las_buffer, version=2.0)
+            new_las.write(las_buffer)
             las_buffer.seek(0)
             
             # Download button
@@ -349,7 +349,6 @@ def display_results():
                 file_name="predicted_dt.las",
                 mime="application/octet-stream"
             )
-            
             st.success("✅ LAS file with predicted DT is ready for download!")
         except Exception as e:
             st.error(f"Error generating LAS file: {str(e)}")
