@@ -264,7 +264,7 @@ def display_results():
     ax3.plot(results['y_test'], results['depth'], 'b-', label='Actual Log', linewidth=1)
     ax3.plot(results['y_pred'], results['depth'], 'r--', label='Predicted Log', linewidth=1)
     ax3.invert_yaxis()
-    ax3.set_xlabel('DT (μs/ft)')
+    ax3.set_xlabel('Target Log (m/s)')
     ax3.set_ylabel('Depth (m)')
     ax3.set_title('DT Comparison Along Depth')
     ax3.legend()
@@ -278,9 +278,9 @@ def display_results():
     ax4.plot([results['y_test'].min(), results['y_test'].max()],
              [results['y_test'].min(), results['y_test'].max()],
              'r--', label='1:1 Line')
-    ax4.set_xlabel('Actual DT')
-    ax4.set_ylabel('Predicted DT')
-    ax4.set_title(f'Real vs Predicted DT (R² = {results["r2"]:.4f})')
+    ax4.set_xlabel('Actual Log')
+    ax4.set_ylabel('Predicted Log')
+    ax4.set_title(f'Real vs Predicted Log (R² = {results["r2"]:.4f})')
     ax4.legend()
     st.pyplot(fig4)
     
