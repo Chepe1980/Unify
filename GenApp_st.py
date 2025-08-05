@@ -278,9 +278,9 @@ def display_results():
     ax2.plot([results['y_true'].min(), results['y_true'].max()],
              [results['y_true'].min(), results['y_true'].max()],
              'r--', label='1:1 Line')
-    ax2.set_xlabel('Actual DT (μs/ft)')
-    ax2.set_ylabel('Predicted DT (μs/ft)')
-    ax2.set_title(f'DT Prediction (R² = {results["r2"]:.3f})')
+    ax2.set_xlabel('Actual Log (m/s)')
+    ax2.set_ylabel('Predicted Log (m/s)')
+    ax2.set_title(f'Log Prediction (R² = {results["r2"]:.3f})')
     plt.colorbar(scatter, label='SW')
     ax2.legend()
     st.pyplot(fig2)
@@ -288,8 +288,8 @@ def display_results():
     # Depth plot
     st.subheader("📏 Depth Profile Comparison")
     fig3, ax3 = plt.subplots(figsize=(8, 12))
-    ax3.plot(results['y_true'], results['depth'], 'b-', label='Actual DT', linewidth=1)
-    ax3.plot(results['y_pred'], results['depth'], 'r--', label='Predicted DT', linewidth=1)
+    ax3.plot(results['y_true'], results['depth'], 'b-', label='Actual Log', linewidth=1)
+    ax3.plot(results['y_pred'], results['depth'], 'r--', label='Predicted Log', linewidth=1)
     ax3.invert_yaxis()
     ax3.set_xlabel('DT (μs/ft)')
     ax3.set_ylabel('Depth (m)')
@@ -309,7 +309,7 @@ def display_results():
     
     ax4b.scatter(results['y_pred'], residuals, alpha=0.5)
     ax4b.axhline(y=0, color='r', linestyle='--')
-    ax4b.set_xlabel('Predicted DT')
+    ax4b.set_xlabel('Predicted Log')
     ax4b.set_ylabel('Residual')
     ax4b.set_title('Residuals vs Predicted Values')
     
@@ -321,8 +321,8 @@ def display_results():
     # Create DataFrame with all data
     df = pd.DataFrame({
         'DEPTH': results['depth'],
-        'DT_ACTUAL': results['y_true'],
-        'DT_PREDICTED': results['y_pred'],
+        'Log_ACTUAL': results['y_true'],
+        'Log_PREDICTED': results['y_pred'],
         'RESIDUAL': residuals
     })
     
