@@ -329,8 +329,8 @@ def display_results():
     # Create DataFrame with all data
     df = pd.DataFrame({
         'DEPTH': results['depth'].flatten(),
-        'DT_ACTUAL': results['y_test'].flatten(),
-        'DT_PREDICTED': results['y_pred'].flatten()
+        'LOG_ACTUAL': results['y_test'].flatten(),
+        'LOG_PREDICTED': results['y_pred'].flatten()
     })
     
     # Add input curves
