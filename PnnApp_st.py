@@ -310,7 +310,7 @@ def display_results():
     
     ax4b.scatter(results['y_pred'], residuals, alpha=0.5)
     ax4b.axhline(y=0, color='r', linestyle='--')
-    ax4b.set_xlabel('Predicted DT')
+    ax4b.set_xlabel('Predicted log')
     ax4b.set_ylabel('Residual')
     ax4b.set_title('Residuals vs Predicted Values')
     
