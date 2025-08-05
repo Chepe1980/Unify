@@ -7,6 +7,8 @@ tensorflow-cpu==2.11.0
 pandas==1.5.2
 rich==13.7.0  # Explicitly pin to this version
 markdown-it-py<3.0.0  # Lock to version 2.x
+--constraint constraints.txt
+
 
 
 
