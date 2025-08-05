@@ -5,6 +5,8 @@ matplotlib
 scikit-learn
 pandas
 rich
+tensorflow
+
 
 
 
