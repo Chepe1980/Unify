@@ -41,6 +41,11 @@ st.markdown("""
         border-radius: 0.5rem;
         margin-bottom: 1rem;
     }
+    .download-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -213,7 +218,9 @@ def process_and_train(las, input_curves, target_curve, epochs, batch_size, learn
                 'mse': mean_squared_error(y_test_original, y_pred),
                 'model': model,
                 'scaler_X': scaler_X,
-                'scaler_y': scaler_y
+                'scaler_y': scaler_y,
+                'input_curves': input_curves,
+                'target_curve': target_curve
             }
             
             st.success("✅ Model training completed!")
@@ -316,50 +323,78 @@ def display_results():
     
     st.pyplot(fig4)
 
-    # Download LAS with predicted DT
+    # Download Section
     st.subheader("⬇️ Export Results")
-    if st.button("💾 Download LAS with Predicted DT"):
-        try:
-            # Create a new LAS file
-            new_las = lasio.LASFile()
-            
-            # Copy header information
-            new_las.well = las.well
-            new_las.header = las.header
-            
-            # Add all original curves
-            for curve in las.curves:
+    
+    # Create DataFrame with all data
+    df = pd.DataFrame({
+        'DEPTH': results['depth'].flatten(),
+        'DT_ACTUAL': results['y_test'].flatten(),
+        'DT_PREDICTED': results['y_pred'].flatten()
+    })
+    
+    # Add input curves
+    for i, curve in enumerate(results['input_curves']):
+        df[curve] = results['X_test'][:, i]
+    
+    # CSV Download
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False)
+    csv_buffer.seek(0)
+    
+    # LAS Download
+    las_buffer = BytesIO()
+    try:
+        new_las = lasio.LASFile()
+        new_las.well = st.session_state.original_las.well
+        new_las.header = st.session_state.original_las.header
+        
+        # Add original curves
+        for curve in st.session_state.original_las.curves:
+            if curve.mnemonic != 'DEPTH':  # Skip depth as we're adding our own
                 new_las.add_curve(
                     curve.mnemonic,
-                    curve.data,
+                    st.session_state.original_las[curve.mnemonic],
                     unit=curve.unit,
                     descr=curve.descr
                 )
-            
-            # Add predicted DT curve
-            new_las.add_curve(
-                mnemonic="DT_PRED",
-                data=results['y_pred'].flatten(),
-                unit="us/ft",
-                descr="Predicted Sonic Log (1D CNN)"
-            )
-            
-            # Write to buffer
-            las_buffer = BytesIO()
-            new_las.write(las_buffer, version=2.0)
-            las_buffer.seek(0)
-            
-            # Download button
-            st.download_button(
-                label="⬇️ Download LAS File",
-                data=las_buffer.getvalue(),
-                file_name="predicted_dt.las",
-                mime="application/octet-stream"
-            )
-            
-            st.success("✅ LAS file with predicted DT is ready for download!")
-        except Exception as e:
-            st.error(f"Error generating LAS file: {str(e)}")
+        
+        # Add predicted DT
+        new_las.add_curve(
+            "DT_PRED",
+            results['y_pred'].flatten(),
+            unit="us/ft",
+            descr="Predicted Sonic Log"
+        )
+        
+        new_las.write(las_buffer, version=2.0)
+        las_buffer.seek(0)
+        las_download_disabled = False
+    except Exception as e:
+        st.warning(f"Couldn't generate LAS file: {str(e)}")
+        las_download_disabled = True
+    
+    # Display download buttons side by side
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_buffer.getvalue(),
+            file_name="predictions.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    
+    with col2:
+        st.download_button(
+            label="📥 Download LAS",
+            data=las_buffer.getvalue() if not las_download_disabled else b'',
+            file_name="predictions.las",
+            mime="application/octet-stream",
+            disabled=las_download_disabled,
+            use_container_width=True
+        )
 
 if __name__ == "__main__":
     main()
