@@ -4,7 +4,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from io import StringIO, BytesIO
 import seaborn as sns
-from ternary.ternary_axes_subplot import TernaryAxesSubplot
 from mpl_toolkits.mplot3d import Axes3D
 
 # Configure the app
@@ -265,7 +264,6 @@ def main():
         - Brittleness index calculation (Rickman and Wang methods)
         - Dynamic to static Young's Modulus conversion
         - Crossplot visualization capabilities
-        - Ternary plots for mineralogy analysis
         
         ### Usage:
         1. Load your well data (Excel format)
