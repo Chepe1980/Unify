@@ -105,7 +105,7 @@ def main():
                 vp_curve = st.selectbox(
                     "Compressional Wave Velocity (Vp)",
                     options=available_curves,
-                    index=next((i for i, curve in enumerate(available_curves) if curve in vp_options), 0)
+                    index=next((i for i, curve in enumerate(available_curves) if curve in vp_options), 0))
                 
                 # Vs curve selection
                 vs_options = ['DTSMOD', 'VS', 'VSC', 'DTSM']
@@ -558,3 +558,4 @@ def display_results():
 
 if __name__ == "__main__":
     main()
+
