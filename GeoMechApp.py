@@ -1,6 +1,7 @@
 import streamlit as st
 import lasio
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from io import StringIO, BytesIO
@@ -69,6 +70,8 @@ def main():
         st.session_state.las_data = None
     if 'results' not in st.session_state:
         st.session_state.results = None
+    if 'las_df' not in st.session_state:
+        st.session_state.las_df = None
     
     # Sidebar controls
     with st.sidebar:
@@ -87,6 +90,7 @@ def main():
                 
                 # Store in session state
                 st.session_state.las_data = las
+                st.session_state.las_df = las.df()
                 
                 st.success("LAS file loaded successfully!")
                 
@@ -101,7 +105,7 @@ def main():
                 vp_curve = st.selectbox(
                     "Compressional Wave Velocity (Vp)",
                     options=available_curves,
-                    index=next((i for i, curve in enumerate(available_curves) if curve in vp_options), 0))
+                    index=next((i for i, curve in enumerate(available_curves) if curve in vp_options), 0)
                 
                 # Vs curve selection
                 vs_options = ['DTSMOD', 'VS', 'VSC', 'DTSM']
@@ -128,14 +132,13 @@ def main():
         display_results()
         
     # Data preview section
-    if uploaded_file and not st.session_state.results and st.session_state.las_data is not None:
+    if uploaded_file and not st.session_state.results and st.session_state.las_df is not None:
         try:
             st.subheader("📋 LAS File Preview")
-            las_df = st.session_state.las_data.df()
-            st.dataframe(las_df.head(), use_container_width=True)
+            st.dataframe(st.session_state.las_df.head(), use_container_width=True)
             
             st.subheader("📊 Curve Statistics")
-            st.dataframe(las_df.describe(), use_container_width=True)
+            st.dataframe(st.session_state.las_df.describe(), use_container_width=True)
         except Exception as e:
             st.warning(f"Couldn't display full preview: {str(e)}")
 
@@ -225,7 +228,10 @@ def calculate_properties(las, vp_curve, vs_curve, rho_curve):
                 'BRITv': BRITv,
                 'BRITh': BRITh,
                 'depth': las.index,
-                'valid_mask': valid_mask
+                'valid_mask': valid_mask,
+                'Vp': Vp,
+                'Vs': Vs,
+                'Rho': Rho/1000  # Convert back to g/cm3 for display
             }
             
             st.success("✅ Calculations completed!")
@@ -462,7 +468,36 @@ def display_results():
     # Download Section
     st.subheader("⬇️ Export Results")
     
-    # Create LAS file with results
+    # Create DataFrame with all data
+    df = pd.DataFrame({
+        'DEPTH': results['depth'],
+        'VP': results['Vp'],
+        'VS': results['Vs'],
+        'RHOB': results['Rho'],
+        'PR': results['PR'],
+        'YM': results['YM'],
+        'DELTA': results['delta'],
+        'EPSILON': results['epsilon'],
+        'GAMMA': results['gamma'],
+        'VV': results['Vv'],
+        'VH': results['Vh'],
+        'YMV': results['YMv'],
+        'YMH': results['YMh'],
+        'BRITV': results['BRITv'],
+        'BRITH': results['BRITh']
+    })
+    
+    # Add original curves from LAS file
+    for curve in st.session_state.las_data.keys():
+        if curve != 'DEPTH':
+            df[curve] = st.session_state.las_data[curve]
+    
+    # Create CSV buffer
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False)
+    csv_buffer.seek(0)
+    
+    # Create LAS buffer
     las_buffer = BytesIO()
     try:
         new_las = lasio.LASFile()
@@ -471,7 +506,7 @@ def display_results():
         
         # Add original curves
         for curve in las.curves:
-            if curve.mnemonic != 'DEPTH':  # Skip depth as we're adding our own
+            if curve.mnemonic != 'DEPTH':
                 new_las.add_curve(
                     curve.mnemonic,
                     las[curve.mnemonic],
@@ -499,16 +534,27 @@ def display_results():
         st.warning(f"Couldn't generate LAS file: {str(e)}")
         las_download_disabled = True
     
-    # Display download button
-    st.download_button(
-        label="📥 Download Results (LAS)",
-        data=las_buffer.getvalue() if not las_download_disabled else b'',
-        file_name="geomechanical_analysis.las",
-        mime="application/octet-stream",
-        disabled=las_download_disabled,
-        use_container_width=True
-    )
+    # Display download buttons side by side
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_buffer.getvalue(),
+            file_name="geomechanical_analysis.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    
+    with col2:
+        st.download_button(
+            label="📥 Download LAS",
+            data=las_buffer.getvalue() if not las_download_disabled else b'',
+            file_name="geomechanical_analysis.las",
+            mime="application/octet-stream",
+            disabled=las_download_disabled,
+            use_container_width=True
+        )
 
 if __name__ == "__main__":
     main()
-
