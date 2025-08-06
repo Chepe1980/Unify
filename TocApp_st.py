@@ -58,15 +58,27 @@ def load_excel(file):
         return None
 
 def calculate_toc(data, Ro, Rtbaseline, Rhobaseline):
-    """Calculate TOC using Passey method"""
+    """Calculate TOC using Passey method with flexible column names"""
     try:
-        Rt = data['Rt'].values if 'Rt' in data.columns else None
-        Rho = data['Rho'].values if 'Rho' in data.columns else None
-        Phie = data['Phie'].values if 'Phie' in data.columns else None
+        # Try common column name variations
+        resistivity_col = next((col for col in data.columns 
+                              if col.upper() in ['RT', 'RESISTIVITY', 'RESIST']), None)
+        density_col = next((col for col in data.columns 
+                          if col.upper() in ['RHO', 'DENSITY', 'DEN']), None)
         
-        if Rt is None or Rho is None:
-            st.error("Resistivity (Rt) and Density (Rho) data required")
+        if resistivity_col is None or density_col is None:
+            st.error("Could not find resistivity and density columns. Please ensure your data contains:")
+            st.error("- Resistivity column (common names: Rt, Resistivity, Resist)")
+            st.error("- Density column (common names: Rho, Density, Den)")
             return None, None, None
+        
+        Rt = data[resistivity_col].values
+        Rho = data[density_col].values
+        
+        # Try to find porosity if available
+        porosity_col = next((col for col in data.columns 
+                           if col.upper() in ['PHIE', 'PHI', 'POROSITY']), None)
+        Phie = data[porosity_col].values if porosity_col else None
         
         # Calculate cementation exponent (m)
         m = 1.20 + 12.76 * Phie if Phie is not None else 2.0
