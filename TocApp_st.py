@@ -126,7 +126,7 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
             Rt = np.abs(Rt)
         
         # Calculate cementation exponent (m)
-        m = 2.0  # Default value
+        m = np.full_like(Rt, 2.0)  # Default value as array
         if 'porosity' in col_map:
             try:
                 Phie = np.array(data[col_map['porosity']], dtype=float)
@@ -151,15 +151,17 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
         TOC = DeltaLog * 10 * np.exp(a)
         TOC = np.clip(TOC, 0, 100)  # Ensure TOC between 0-100%
         
-        # Calculate mean LOM for display
+        # Calculate mean values for display
         mean_LOM = np.nanmean(LOM) if isinstance(LOM, (np.ndarray, list)) else LOM
+        mean_m = np.nanmean(m) if isinstance(m, (np.ndarray, list)) else m
         
         return {
             'TOC': TOC,
             'DeltaLog': DeltaLog,
             'LOM': LOM,
             'mean_LOM': mean_LOM,
-            'm': m
+            'm': m,
+            'mean_m': mean_m
         }
     
     except Exception as e:
@@ -169,7 +171,8 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
             'DeltaLog': None,
             'LOM': None,
             'mean_LOM': None,
-            'm': None
+            'm': None,
+            'mean_m': None
         }
 
 def calculate_brittleness_rickman(YM, PR):
@@ -209,6 +212,7 @@ def main():
             'LOM': None,
             'mean_LOM': None,
             'm': None,
+            'mean_m': None,
             'BI': None,
             'brittle_method': None,
             'TOC_corrected': None
@@ -315,20 +319,17 @@ def main():
             
             with col2:
                 if st.session_state.results.get('mean_LOM') is not None:
-                    lom_value = st.session_state.results['mean_LOM']
-                    m_value = st.session_state.results.get('m', 'N/A')
-                    
                     st.markdown(f"""
                     <div class="metric-card">
                         <h3>Level of Maturity (LOM)</h3>
-                        <p>{'N/A' if lom_value is None else f'{lom_value:.2f}'}</p>
+                        <p>{'N/A' if st.session_state.results['mean_LOM'] is None else f'{st.session_state.results["mean_LOM"]:.2f}'}</p>
                     </div>
                     """, unsafe_allow_html=True)
                     
                     st.markdown(f"""
                     <div class="metric-card">
                         <h3>Cementation Exponent (m)</h3>
-                        <p>{m_value if m_value is None or isinstance(m_value, str) else f'{m_value:.2f}'}</p>
+                        <p>{'N/A' if st.session_state.results['mean_m'] is None else f'{st.session_state.results["mean_m"]:.2f}'}</p>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
@@ -391,7 +392,8 @@ def main():
                     'DeltaLogR': st.session_state.results['DeltaLog'],
                     'LOM': st.session_state.results['LOM'],
                     'Mean_LOM': st.session_state.results['mean_LOM'],
-                    'Cementation_Exponent': st.session_state.results['m']
+                    'Cementation_Exponent': st.session_state.results['m'],
+                    'Mean_Cementation_Exponent': st.session_state.results['mean_m']
                 })
                 
                 if st.session_state.results.get('TOC_corrected') is not None:
