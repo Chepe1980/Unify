@@ -280,36 +280,27 @@ def main():
                                 'm': m
                             })
                             st.success("TOC calculation completed!")
-            
             with col2:
-                if st.session_state.results['LOM'] is not None:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <h3>Level of Maturity (LOM)</h3>
-                        <p>{st.session_state.results['LOM']:.2f}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <h3>Cementation Exponent (m)</h3>
-                        <p>{st.session_state.results['m']:.2f}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.warning("Calculate TOC first to see LOM and cementation exponent values")
-                
-                st.markdown("**TOC Correction**")
-                slope = st.number_input("Correction Slope", value=1.0, step=0.1)
-                intercept = st.number_input("Correction Intercept", value=0.0, step=0.1)
-                
-                if st.button("Apply TOC Correction", key="correct_toc"):
-                    if st.session_state.results['TOC'] is not None:
-                        corrected_toc = slope * st.session_state.results['TOC'] + intercept
-                        st.session_state.results['TOC_corrected'] = corrected_toc
-                        st.success("TOC correction applied!")
-                    else:
-                        st.error("Please calculate TOC first before applying correction")
+    if st.session_state.results.get('LOM') is not None:
+        lom_value = st.session_state.results['LOM']
+        m_value = st.session_state.results.get('m', 'N/A')
+        
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>Level of Maturity (LOM)</h3>
+            <p>{lom_value if lom_value is None else f'{lom_value:.2f}'}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>Cementation Exponent (m)</h3>
+            <p>{m_value if m_value is None or isinstance(m_value, str) else f'{m_value:.2f}'}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("Calculate TOC first to see LOM and cementation exponent values")
+
     
     # Display TOC Results
     if st.session_state.results['TOC'] is not None:
