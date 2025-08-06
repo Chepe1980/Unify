@@ -135,7 +135,7 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
             raise ValueError("Input parameters must be positive numbers")
         
         # Get data with validation
-        Rt = np.array(data[col_map['resistivity']]).astype(float)  # Fixed this line
+        Rt = np.array(data[col_map['resistivity']]).astype(float)
         Rho = np.array(data[col_map['density']]).astype(float)
         
         # Handle zeros in resistivity
@@ -143,7 +143,6 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
             st.warning("Negative or zero resistivity values found. Using absolute values.")
             Rt = np.abs(Rt)
         
-        # Rest of the function remains the same...
         # Calculate cementation exponent (m)
         m = 2.0  # Default value
         if 'porosity' in col_map:
@@ -216,7 +215,7 @@ def calculate_brittleness_rickman(YM, PR):
 def main():
     st.title("⛏️ PasseyToc - TOC and Brittleness Analysis")
     
-    # Initialize session state
+    # Initialize session state with default values
     if 'data' not in st.session_state:
         st.session_state.data = None
     if 'toc_data' not in st.session_state:
@@ -224,7 +223,14 @@ def main():
     if 'xrd_data' not in st.session_state:
         st.session_state.xrd_data = None
     if 'results' not in st.session_state:
-        st.session_state.results = {}
+        st.session_state.results = {
+            'TOC': None,
+            'DeltaLog': None,
+            'LOM': None,
+            'm': None,
+            'BI': None,
+            'brittle_method': None
+        }
     if 'col_map' not in st.session_state:
         st.session_state.col_map = {}
     
@@ -311,24 +317,29 @@ def main():
                 )
                 
                 if st.button("Calculate TOC", key="calc_toc"):
-                    with st.spinner('Calculating TOC... This may take a few moments'):
-                        TOC, DeltaLog, LOM, m = calculate_toc(
-                            st.session_state.data,
-                            st.session_state.col_map,
-                            Ro, Rtbaseline, Rhobaseline
-                        )
-                        
-                        if TOC is not None:
-                            st.session_state.results.update({
-                                'TOC': TOC,
-                                'DeltaLog': DeltaLog,
-                                'LOM': LOM,
-                                'm': m
-                            })
-                            st.success("TOC calculation completed!")
+                    if st.session_state.data[st.session_state.col_map['resistivity']].isnull().any():
+                        st.error("Resistivity data contains missing values")
+                    elif st.session_state.data[st.session_state.col_map['density']].isnull().any():
+                        st.error("Density data contains missing values")
+                    else:
+                        with st.spinner('Calculating TOC... This may take a few moments'):
+                            TOC, DeltaLog, LOM, m = calculate_toc(
+                                st.session_state.data,
+                                st.session_state.col_map,
+                                Ro, Rtbaseline, Rhobaseline
+                            )
+                            
+                            if TOC is not None:
+                                st.session_state.results.update({
+                                    'TOC': TOC,
+                                    'DeltaLog': DeltaLog,
+                                    'LOM': LOM,
+                                    'm': m
+                                })
+                                st.success("TOC calculation completed!")
             
             with col2:
-                if 'TOC' in st.session_state.results:
+                if st.session_state.results['LOM'] is not None:
                     st.markdown(f"""
                     <div class="metric-card">
                         <h3>Level of Maturity (LOM)</h3>
@@ -342,21 +353,26 @@ def main():
                         <p>{st.session_state.results['m']:.2f}</p>
                     </div>
                     """, unsafe_allow_html=True)
-                    
-                    # TOC Correction
-                    st.markdown("**TOC Correction**")
-                    slope = st.number_input("Correction Slope", value=1.0, step=0.1,
-                                          help="Multiplicative correction factor (a in TOC_corr = a*TOC + b)")
-                    intercept = st.number_input("Correction Intercept", value=0.0, step=0.1,
-                                              help="Additive correction factor (b in TOC_corr = a*TOC + b)")
-                    
-                    if st.button("Apply TOC Correction", key="correct_toc"):
+                else:
+                    st.warning("Calculate TOC first to see LOM and cementation exponent values")
+                
+                # TOC Correction
+                st.markdown("**TOC Correction**")
+                slope = st.number_input("Correction Slope", value=1.0, step=0.1,
+                                      help="Multiplicative correction factor (a in TOC_corr = a*TOC + b)")
+                intercept = st.number_input("Correction Intercept", value=0.0, step=0.1,
+                                          help="Additive correction factor (b in TOC_corr = a*TOC + b)")
+                
+                if st.button("Apply TOC Correction", key="correct_toc"):
+                    if st.session_state.results['TOC'] is not None:
                         corrected_toc = slope * st.session_state.results['TOC'] + intercept
                         st.session_state.results['TOC_corrected'] = corrected_toc
                         st.success("TOC correction applied!")
+                    else:
+                        st.error("Please calculate TOC first before applying correction")
     
     # Display TOC Results
-    if 'TOC' in st.session_state.results:
+    if st.session_state.results['TOC'] is not None:
         with st.expander("📊 TOC Results", expanded=True):
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
             
@@ -475,7 +491,7 @@ def main():
                         except Exception as e:
                             st.error(f"Wang brittleness calculation error: {str(e)}")
             
-            if 'BI' in st.session_state.results:
+            if st.session_state.results['BI'] is not None:
                 st.markdown(f"""
                 <div class="metric-card">
                     <h3>Brittleness Index ({st.session_state.results['brittle_method']} Method)</h3>
@@ -541,7 +557,7 @@ def main():
             
             if ('youngs_modulus' in st.session_state.col_map and 
                 'poissons_ratio' in st.session_state.col_map and 
-                'BI' in st.session_state.results):
+                st.session_state.results['BI'] is not None):
                 
                 if st.button("Generate 3D Plot", key="gen_3dplot"):
                     with st.spinner('Generating 3D plot...'):
@@ -553,7 +569,7 @@ def main():
                             y = st.session_state.data[st.session_state.col_map['youngs_modulus']].values
                             z = st.session_state.results['BI']
                             
-                            if 'TOC' in st.session_state.results:
+                            if st.session_state.results['TOC'] is not None:
                                 sc = ax.scatter(x, y, z, c=st.session_state.results['TOC'], cmap='viridis', s=40)
                                 fig.colorbar(sc, ax=ax, label='TOC')
                             else:
@@ -611,6 +627,7 @@ def main():
         - If you get column detection errors, check your column names
         - For calculation errors, verify your input parameters
         - For unusually high TOC values, check your baseline values
+        - Missing values in your data will cause calculation failures
         """)
 
 if __name__ == "__main__":
