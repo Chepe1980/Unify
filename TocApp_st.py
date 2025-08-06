@@ -363,7 +363,7 @@ def main():
             # Get depth if available
             depth = (st.session_state.data[st.session_state.col_map['depth']].values 
                     if 'depth' in st.session_state.col_map 
-                    else np.arange(len(st.session_state.results['TOC']))
+                    else np.arange(len(st.session_state.results['TOC'])))
             
             # TOC Plot with quality ranges
             ax1.axvspan(0, 1, facecolor='red', alpha=0.1, label='Poor')
