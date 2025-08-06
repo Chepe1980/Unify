@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+from io import StringIO
 
 # Configure the app
 st.set_page_config(
@@ -53,6 +54,31 @@ st.markdown("""
         border-radius: 0.5rem;
         margin-bottom: 1rem;
     }
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        border-bottom: 1px dotted black;
+    }
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -68,51 +94,102 @@ def load_excel(file):
         return None
 
 def detect_columns(df):
-    """Identify required columns with flexible naming"""
+    """Improved column detection with more flexible naming"""
     col_map = {
-        'depth': ['depth', 'dept', 'md', 'measured depth'],
-        'resistivity': ['rt', 'resistivity', 'resist', 'ild'],
-        'density': ['rho', 'density', 'den', 'rhob'],
-        'porosity': ['phie', 'phi', 'porosity', 'nphi'],
-        'youngs_modulus': ['ym', 'youngs modulus', 'youngs_modulus', 'e'],
-        'poissons_ratio': ['pr', 'poissons ratio', 'poissons_ratio', 'v']
+        'depth': ['depth', 'dept', 'md', 'measured depth', 'depth(m)', 'depth (m)'],
+        'resistivity': ['rt', 'resistivity', 'resist', 'ild', 'resistivity(ohm.m)', 
+                       'resist(ohm.m)', 'log_resistivity', 'res'],
+        'density': ['rho', 'density', 'den', 'rhob', 'density(g/cc)', 'den(g/cc)'],
+        'porosity': ['phie', 'phi', 'porosity', 'nphi', 'phi_e', 'phie(%)'],
+        'youngs_modulus': ['ym', 'youngs modulus', 'youngs_modulus', 'e', 'youngs', 'elastic_modulus'],
+        'poissons_ratio': ['pr', 'poissons ratio', 'poissons_ratio', 'v', 'nu', 'poisson']
     }
     
     detected = {}
+    df_cols_lower = [col.lower().strip() for col in df.columns]
+    
     for col_type, possible_names in col_map.items():
         for name in possible_names:
-            if name.lower() in [c.lower() for c in df.columns]:
-                detected[col_type] = name
+            name_lower = name.lower()
+            if name_lower in df_cols_lower:
+                # Get the original column name with correct case
+                original_name = df.columns[df_cols_lower.index(name_lower)]
+                detected[col_type] = original_name
                 break
+            # Try partial matches for more flexibility
+            for col in df.columns:
+                if name_lower in col.lower():
+                    detected[col_type] = col
+                    break
     
     return detected
 
 def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
-    """Calculate TOC using Passey method"""
+    """Calculate TOC using Passey method with robust error handling"""
     try:
-        Rt = data[col_map['resistivity']].values
-        Rho = data[col_map['density']].values
+        # Validate inputs
+        if not all(k in col_map for k in ['resistivity', 'density']):
+            raise ValueError("Missing required columns (resistivity and density)")
+        
+        if Ro <= 0 or Rtbaseline <= 0 or Rhobaseline <= 0:
+            raise ValueError("Input parameters must be positive numbers")
+        
+        # Get data with validation
+        Rt = np.array(data[col_map['resistivity']).astype(float)
+        Rho = np.array(data[col_map['density']]).astype(float)
+        
+        # Handle zeros in resistivity
+        if np.any(Rt <= 0):
+            st.warning("Negative or zero resistivity values found. Using absolute values.")
+            Rt = np.abs(Rt)
         
         # Calculate cementation exponent (m)
-        Phie = data[col_map['porosity']].values if 'porosity' in col_map else None
-        m = 1.20 + 12.76 * Phie if Phie is not None else 2.0
+        m = 2.0  # Default value
+        if 'porosity' in col_map:
+            try:
+                Phie = np.array(data[col_map['porosity']]).astype(float)
+                Phie = np.clip(Phie, 0.01, 0.40)  # Reasonable porosity range
+                m = 1.20 + 12.76 * Phie
+            except Exception as e:
+                st.warning(f"Porosity calculation failed, using default m=2.0. Error: {str(e)}")
         
-        # Calculate LOM
-        exp_term = np.exp(1 - 2.778 * Ro)
-        denominator = 0.59 + 0.41 * (exp_term ** 28.45)
-        LOM = 8.18 * (Ro / denominator) ** (1 / m)
+        # Calculate LOM with safeguards
+        try:
+            exp_term = np.exp(1 - 2.778 * Ro)
+            denominator = 0.59 + 0.41 * (exp_term ** 28.45)
+            denominator = np.maximum(denominator, 1e-6)  # Prevent division by zero
+            LOM = 8.18 * (Ro / denominator) ** (1 / m)
+            LOM = np.clip(LOM, 5, 15)  # Reasonable LOM range
+        except Exception as e:
+            raise ValueError(f"LOM calculation failed: {str(e)}")
         
-        # Calculate DeltaLogR
-        DeltaLog = np.log10(Rt / Rtbaseline) + 2.5 * (Rho - Rhobaseline)
+        # Calculate DeltaLogR with safeguards
+        try:
+            DeltaLog = np.log10(Rt / Rtbaseline) + 2.5 * (Rho - Rhobaseline)
+            DeltaLog = np.nan_to_num(DeltaLog, nan=0.0, posinf=10, neginf=-10)
+        except Exception as e:
+            raise ValueError(f"DeltaLogR calculation failed: {str(e)}")
         
-        # Calculate TOC
-        a = 0.0297 - 0.1688 * LOM
-        TOC = DeltaLog * 10 * np.exp(a)
+        # Calculate TOC with safeguards
+        try:
+            a = 0.0297 - 0.1688 * LOM
+            TOC = DeltaLog * 10 * np.exp(a)
+            TOC = np.clip(TOC, 0, 100)  # Ensure TOC between 0-100%
+            
+            # Additional quality checks
+            if np.all(TOC == 0):
+                raise ValueError("Calculated TOC is all zeros - check input parameters")
+            if np.nanmax(TOC) > 50:
+                st.warning("Unusually high TOC values detected (>50%) - verify input parameters")
+            
+            return TOC, DeltaLog, LOM, m
         
-        return TOC, DeltaLog, LOM, m
+        except Exception as e:
+            raise ValueError(f"TOC calculation failed: {str(e)}")
     
     except Exception as e:
         st.error(f"TOC calculation error: {str(e)}")
+        st.error("Please check: 1) Column names, 2) Input parameters, 3) Data values")
         return None, None, None, None
 
 def calculate_brittleness_rickman(YM, PR):
@@ -216,28 +293,38 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                Ro = st.number_input("Vitrinite Reflectance (Ro)", 
-                                   min_value=0.1, max_value=5.0, value=0.5, step=0.1)
-                Rtbaseline = st.number_input("Resistivity Baseline (Rtbaseline)", 
-                                           min_value=0.1, value=5.0, step=0.1)
-                Rhobaseline = st.number_input("Density Baseline (Rhobaseline)", 
-                                            min_value=1.0, max_value=3.0, value=2.65, step=0.01)
+                Ro = st.number_input(
+                    "Vitrinite Reflectance (Ro)", 
+                    min_value=0.1, max_value=5.0, value=0.5, step=0.1,
+                    help="Maturity indicator. Typical values: 0.5-1.0 for oil window, 1.0-1.3 for wet gas, >1.3 for dry gas"
+                )
+                Rtbaseline = st.number_input(
+                    "Resistivity Baseline (Rtbaseline)", 
+                    min_value=0.1, value=5.0, step=0.1,
+                    help="Resistivity value in non-source rock intervals (ohm-m)"
+                )
+                Rhobaseline = st.number_input(
+                    "Density Baseline (Rhobaseline)", 
+                    min_value=1.0, max_value=3.0, value=2.65, step=0.01,
+                    help="Density value in non-source rock intervals (g/cc)"
+                )
                 
                 if st.button("Calculate TOC", key="calc_toc"):
-                    TOC, DeltaLog, LOM, m = calculate_toc(
-                        st.session_state.data,
-                        st.session_state.col_map,
-                        Ro, Rtbaseline, Rhobaseline
-                    )
-                    
-                    if TOC is not None:
-                        st.session_state.results.update({
-                            'TOC': TOC,
-                            'DeltaLog': DeltaLog,
-                            'LOM': LOM,
-                            'm': m
-                        })
-                        st.success("TOC calculation completed!")
+                    with st.spinner('Calculating TOC... This may take a few moments'):
+                        TOC, DeltaLog, LOM, m = calculate_toc(
+                            st.session_state.data,
+                            st.session_state.col_map,
+                            Ro, Rtbaseline, Rhobaseline
+                        )
+                        
+                        if TOC is not None:
+                            st.session_state.results.update({
+                                'TOC': TOC,
+                                'DeltaLog': DeltaLog,
+                                'LOM': LOM,
+                                'm': m
+                            })
+                            st.success("TOC calculation completed!")
             
             with col2:
                 if 'TOC' in st.session_state.results:
@@ -256,8 +343,11 @@ def main():
                     """, unsafe_allow_html=True)
                     
                     # TOC Correction
-                    slope = st.number_input("Correction Slope", value=1.0, step=0.1)
-                    intercept = st.number_input("Correction Intercept", value=0.0, step=0.1)
+                    st.markdown("**TOC Correction**")
+                    slope = st.number_input("Correction Slope", value=1.0, step=0.1,
+                                          help="Multiplicative correction factor (a in TOC_corr = a*TOC + b)")
+                    intercept = st.number_input("Correction Intercept", value=0.0, step=0.1,
+                                              help="Additive correction factor (b in TOC_corr = a*TOC + b)")
                     
                     if st.button("Apply TOC Correction", key="correct_toc"):
                         corrected_toc = slope * st.session_state.results['TOC'] + intercept
@@ -272,34 +362,80 @@ def main():
             # Get depth if available
             depth = (st.session_state.data[st.session_state.col_map['depth']].values 
                     if 'depth' in st.session_state.col_map 
-                    else np.arange(len(st.session_state.results['TOC'])))
+                    else np.arange(len(st.session_state.results['TOC']))
             
-            # TOC Plot
-            ax1.plot(st.session_state.results['TOC'], depth, 'k-', label='TOC Passey')
+            # TOC Plot with quality ranges
+            ax1.axvspan(0, 1, facecolor='red', alpha=0.1, label='Poor')
+            ax1.axvspan(1, 2, facecolor='orange', alpha=0.1, label='Fair')
+            ax1.axvspan(2, 4, facecolor='green', alpha=0.1, label='Good')
+            ax1.axvspan(4, 100, facecolor='blue', alpha=0.1, label='Excellent')
+            
+            ax1.plot(st.session_state.results['TOC'], depth, 'k-', linewidth=1.5, label='TOC Passey')
             if 'TOC_corrected' in st.session_state.results:
-                ax1.plot(st.session_state.results['TOC_corrected'], depth, 'r-', label='Corrected TOC')
+                ax1.plot(st.session_state.results['TOC_corrected'], depth, 'r--', linewidth=1.5, label='Corrected TOC')
             if st.session_state.toc_data is not None:
                 ax1.scatter(st.session_state.toc_data.iloc[:, 1], 
                            st.session_state.toc_data.iloc[:, 0], 
                            c='b', s=40, edgecolor='k', label='TOC RockEval')
+            
             ax1.set_xlabel('TOC (%)')
             ax1.set_ylabel('Depth (m)' if 'depth' in st.session_state.col_map else 'Index')
-            ax1.set_title('TOC Profile')
-            ax1.grid(True)
-            ax1.legend()
+            ax1.set_title('TOC Profile with Quality Ranges')
+            ax1.grid(True, linestyle='--', alpha=0.7)
+            ax1.legend(loc='upper right')
             if 'depth' in st.session_state.col_map:
                 ax1.invert_yaxis()
             
             # DlogR Plot
-            ax2.plot(st.session_state.results['DeltaLog'], depth, 'b-')
+            ax2.plot(st.session_state.results['DeltaLog'], depth, 'b-', linewidth=1.5)
             ax2.set_xlabel('ΔlogR')
             ax2.set_ylabel('Depth (m)' if 'depth' in st.session_state.col_map else 'Index')
             ax2.set_title('ΔlogR Profile')
-            ax2.grid(True)
+            ax2.grid(True, linestyle='--', alpha=0.7)
             if 'depth' in st.session_state.col_map:
                 ax2.invert_yaxis()
             
-            st.pyplot(fig)
+            st.pyplot(fig, use_container_width=True)
+            
+            # Export Results
+            with st.expander("💾 Export Results", expanded=False):
+                # Create a DataFrame with all results
+                output_df = pd.DataFrame({
+                    'Depth': depth,
+                    'TOC': st.session_state.results['TOC'],
+                    'DeltaLogR': st.session_state.results['DeltaLog'],
+                    'LOM': st.session_state.results['LOM'],
+                    'Cementation_Exponent': st.session_state.results['m']
+                })
+                
+                # Add corrected TOC if available
+                if 'TOC_corrected' in st.session_state.results:
+                    output_df['TOC_Corrected'] = st.session_state.results['TOC_corrected']
+                
+                # Export buttons
+                col1, col2 = st.columns(2)
+                with col1:
+                    # CSV Export
+                    csv = output_df.to_csv(index=False)
+                    st.download_button(
+                        "Download CSV",
+                        data=csv,
+                        file_name="toc_results.csv",
+                        mime="text/csv"
+                    )
+                
+                with col2:
+                    # Excel Export
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        output_df.to_excel(writer, index=False, sheet_name='TOC_Results')
+                        writer.close()
+                    st.download_button(
+                        "Download Excel",
+                        data=output.getvalue(),
+                        file_name="toc_results.xlsx",
+                        mime="application/vnd.ms-excel"
+                    )
     
     # Brittleness Analysis Section
     if (st.session_state.data is not None and 
@@ -311,30 +447,32 @@ def main():
             
             if method == "Rickman":
                 if st.button("Calculate Brittleness (Rickman)", key="calc_brittle_rickman"):
-                    BI = calculate_brittleness_rickman(
-                        st.session_state.data[st.session_state.col_map['youngs_modulus']].values,
-                        st.session_state.data[st.session_state.col_map['poissons_ratio']].values
-                    )
-                    if BI is not None:
-                        st.session_state.results['BI'] = BI
-                        st.session_state.results['brittle_method'] = "Rickman"
-                        st.success("Brittleness calculation completed!")
+                    with st.spinner('Calculating Brittleness Index...'):
+                        BI = calculate_brittleness_rickman(
+                            st.session_state.data[st.session_state.col_map['youngs_modulus']].values,
+                            st.session_state.data[st.session_state.col_map['poissons_ratio']].values
+                        )
+                        if BI is not None:
+                            st.session_state.results['BI'] = BI
+                            st.session_state.results['brittle_method'] = "Rickman"
+                            st.success("Brittleness calculation completed!")
             
             elif method == "Wang" and st.session_state.xrd_data is not None:
                 if st.button("Calculate Brittleness (Wang)", key="calc_brittle_wang"):
-                    try:
-                        Qz = st.session_state.xrd_data.iloc[:, 1].values
-                        Dlm = st.session_state.xrd_data.iloc[:, 2].values
-                        CLc = st.session_state.xrd_data.iloc[:, 3].values
-                        Cly = st.session_state.xrd_data.iloc[:, 4].values
-                        ToC1 = st.session_state.xrd_data.iloc[:, 5].values / 100
-                        
-                        BrittleWang = (Qz + Dlm) / (Qz + Dlm + CLc + Cly + ToC1) * 100
-                        st.session_state.results['BI'] = BrittleWang
-                        st.session_state.results['brittle_method'] = "Wang"
-                        st.success("Brittleness calculation completed!")
-                    except Exception as e:
-                        st.error(f"Wang brittleness calculation error: {str(e)}")
+                    with st.spinner('Calculating Brittleness Index...'):
+                        try:
+                            Qz = st.session_state.xrd_data.iloc[:, 1].values
+                            Dlm = st.session_state.xrd_data.iloc[:, 2].values
+                            CLc = st.session_state.xrd_data.iloc[:, 3].values
+                            Cly = st.session_state.xrd_data.iloc[:, 4].values
+                            ToC1 = st.session_state.xrd_data.iloc[:, 5].values / 100
+                            
+                            BrittleWang = (Qz + Dlm) / (Qz + Dlm + CLc + Cly + ToC1) * 100
+                            st.session_state.results['BI'] = BrittleWang
+                            st.session_state.results['brittle_method'] = "Wang"
+                            st.success("Brittleness calculation completed!")
+                        except Exception as e:
+                            st.error(f"Wang brittleness calculation error: {str(e)}")
             
             if 'BI' in st.session_state.results:
                 st.markdown(f"""
@@ -351,15 +489,15 @@ def main():
                         if 'depth' in st.session_state.col_map 
                         else np.arange(len(st.session_state.results['BI'])))
                 
-                ax.plot(st.session_state.results['BI'], depth, 'r-')
+                ax.plot(st.session_state.results['BI'], depth, 'r-', linewidth=1.5)
                 ax.set_xlabel('Brittleness Index')
                 ax.set_ylabel('Depth (m)' if 'depth' in st.session_state.col_map else 'Index')
                 ax.set_title(f'Brittleness Profile ({st.session_state.results["brittle_method"]} Method)')
-                ax.grid(True)
+                ax.grid(True, linestyle='--', alpha=0.7)
                 if 'depth' in st.session_state.col_map:
                     ax.invert_yaxis()
                 
-                st.pyplot(fig)
+                st.pyplot(fig, use_container_width=True)
     
     # Crossplots Section
     if st.session_state.data is not None and st.session_state.col_map:
@@ -376,57 +514,59 @@ def main():
                 color_by = st.selectbox("Color by", ["None"] + list(st.session_state.data.columns))
             
             if st.button("Generate Crossplot", key="gen_crossplot"):
-                try:
-                    x = st.session_state.data[x_axis].values
-                    y = st.session_state.data[y_axis].values
-                    c = st.session_state.data[color_by].values if color_by != "None" else None
+                with st.spinner('Generating crossplot...'):
+                    try:
+                        x = st.session_state.data[x_axis].values
+                        y = st.session_state.data[y_axis].values
+                        c = st.session_state.data[color_by].values if color_by != "None" else None
+                        
+                        fig, ax = plt.subplots(figsize=(8, 8))
+                        
+                        if c is not None:
+                            sc = ax.scatter(x, y, c=c, cmap='viridis', s=30, edgecolor='k')
+                            plt.colorbar(sc, ax=ax, label=color_by)
+                        else:
+                            ax.scatter(x, y, s=30, edgecolor='k')
+                        
+                        ax.set_xlabel(x_axis)
+                        ax.set_ylabel(y_axis)
+                        ax.set_title(f"{y_axis} vs {x_axis}")
+                        ax.grid(True)
+                        
+                        st.pyplot(fig)
                     
-                    fig, ax = plt.subplots(figsize=(8, 8))
-                    
-                    if c is not None:
-                        sc = ax.scatter(x, y, c=c, cmap='viridis', s=30, edgecolor='k')
-                        plt.colorbar(sc, ax=ax, label=color_by)
-                    else:
-                        ax.scatter(x, y, s=30, edgecolor='k')
-                    
-                    ax.set_xlabel(x_axis)
-                    ax.set_ylabel(y_axis)
-                    ax.set_title(f"{y_axis} vs {x_axis}")
-                    ax.grid(True)
-                    
-                    st.pyplot(fig)
-                
-                except Exception as e:
-                    st.error(f"Crossplot generation error: {str(e)}")
+                    except Exception as e:
+                        st.error(f"Crossplot generation error: {str(e)}")
             
             if ('youngs_modulus' in st.session_state.col_map and 
                 'poissons_ratio' in st.session_state.col_map and 
                 'BI' in st.session_state.results):
                 
                 if st.button("Generate 3D Plot", key="gen_3dplot"):
-                    try:
-                        fig = plt.figure(figsize=(10, 8))
-                        ax = fig.add_subplot(111, projection='3d')
+                    with st.spinner('Generating 3D plot...'):
+                        try:
+                            fig = plt.figure(figsize=(10, 8))
+                            ax = fig.add_subplot(111, projection='3d')
+                            
+                            x = st.session_state.data[st.session_state.col_map['poissons_ratio']].values
+                            y = st.session_state.data[st.session_state.col_map['youngs_modulus']].values
+                            z = st.session_state.results['BI']
+                            
+                            if 'TOC' in st.session_state.results:
+                                sc = ax.scatter(x, y, z, c=st.session_state.results['TOC'], cmap='viridis', s=40)
+                                fig.colorbar(sc, ax=ax, label='TOC')
+                            else:
+                                ax.scatter(x, y, z, s=40)
+                            
+                            ax.set_xlabel("Poisson's Ratio")
+                            ax.set_ylabel("Young's Modulus")
+                            ax.set_zlabel("Brittleness Index")
+                            ax.set_title("3D Crossplot")
+                            
+                            st.pyplot(fig)
                         
-                        x = st.session_state.data[st.session_state.col_map['poissons_ratio']].values
-                        y = st.session_state.data[st.session_state.col_map['youngs_modulus']].values
-                        z = st.session_state.results['BI']
-                        
-                        if 'TOC' in st.session_state.results:
-                            sc = ax.scatter(x, y, z, c=st.session_state.results['TOC'], cmap='viridis', s=40)
-                            fig.colorbar(sc, ax=ax, label='TOC')
-                        else:
-                            ax.scatter(x, y, z, s=40)
-                        
-                        ax.set_xlabel("Poisson's Ratio")
-                        ax.set_ylabel("Young's Modulus")
-                        ax.set_zlabel("Brittleness Index")
-                        ax.set_title("3D Crossplot")
-                        
-                        st.pyplot(fig)
-                    
-                    except Exception as e:
-                        st.error(f"3D plot generation error: {str(e)}")
+                        except Exception as e:
+                            st.error(f"3D plot generation error: {str(e)}")
 
     # Help Section
     with st.expander("ℹ️ Help", expanded=False):
@@ -437,6 +577,7 @@ def main():
         - TOC calculation using Passey's ΔlogR method with LOM correction
         - Brittleness index calculation (Rickman and Wang methods)
         - Interactive visualization of results
+        - Data export capabilities
         
         ### Usage Instructions:
         1. **Upload Data**:
@@ -459,11 +600,16 @@ def main():
         
         ### Column Naming:
         The tool automatically detects columns with common names:
-        - Resistivity: Rt, Resistivity, Resist, ILD
-        - Density: Rho, Density, Den, RHOB
-        - Porosity: Phie, Phi, Porosity, NPHI
+        - Resistivity: Rt, Resistivity, Resist, ILD, resistivity(ohm.m)
+        - Density: Rho, Density, Den, RHOB, density(g/cc)
+        - Porosity: Phie, Phi, Porosity, NPHI, phie(%)
         - Young's Modulus: YM, Youngs Modulus, Youngs_modulus, E
         - Poisson's Ratio: PR, Poissons Ratio, Poissons_ratio, V
+        
+        ### Troubleshooting:
+        - If you get column detection errors, check your column names
+        - For calculation errors, verify your input parameters
+        - For unusually high TOC values, check your baseline values
         """)
 
 if __name__ == "__main__":
