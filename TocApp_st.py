@@ -338,23 +338,24 @@ def main():
                                 })
                                 st.success("TOC calculation completed!")
             
-            with col2:
-                if st.session_state.results['LOM'] is not None:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <h3>Level of Maturity (LOM)</h3>
-                        <p>{st.session_state.results['LOM']:.2f}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <h3>Cementation Exponent (m)</h3>
-                        <p>{st.session_state.results['m']:.2f}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.warning("Calculate TOC first to see LOM and cementation exponent values")
+# In the TOC Calculation section where you display the metrics:
+with col2:
+    if st.session_state.results.get('LOM') is not None:
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>Level of Maturity (LOM)</h3>
+            <p>{st.session_state.results['LOM']:.2f}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>Cementation Exponent (m)</h3>
+            <p>{st.session_state.results['m']:.2f}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("Calculate TOC first to see LOM and cementation exponent values")
                 
                 # TOC Correction
                 st.markdown("**TOC Correction**")
