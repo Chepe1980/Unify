@@ -135,7 +135,7 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
             raise ValueError("Input parameters must be positive numbers")
         
         # Get data with validation
-        Rt = np.array(data[col_map['resistivity']).astype(float)
+        Rt = np.array(data[col_map['resistivity']]).astype(float)  # Fixed this line
         Rho = np.array(data[col_map['density']]).astype(float)
         
         # Handle zeros in resistivity
@@ -143,6 +143,7 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
             st.warning("Negative or zero resistivity values found. Using absolute values.")
             Rt = np.abs(Rt)
         
+        # Rest of the function remains the same...
         # Calculate cementation exponent (m)
         m = 2.0  # Default value
         if 'porosity' in col_map:
