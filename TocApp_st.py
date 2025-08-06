@@ -151,10 +151,14 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
         TOC = DeltaLog * 10 * np.exp(a)
         TOC = np.clip(TOC, 0, 100)  # Ensure TOC between 0-100%
         
+        # Calculate mean LOM for display
+        mean_LOM = np.nanmean(LOM) if isinstance(LOM, (np.ndarray, list)) else LOM
+        
         return {
             'TOC': TOC,
             'DeltaLog': DeltaLog,
             'LOM': LOM,
+            'mean_LOM': mean_LOM,
             'm': m
         }
     
@@ -164,6 +168,7 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
             'TOC': None,
             'DeltaLog': None,
             'LOM': None,
+            'mean_LOM': None,
             'm': None
         }
 
@@ -202,6 +207,7 @@ def main():
             'TOC': None,
             'DeltaLog': None,
             'LOM': None,
+            'mean_LOM': None,
             'm': None,
             'BI': None,
             'brittle_method': None,
@@ -308,14 +314,14 @@ def main():
                             st.success("TOC calculation completed!")
             
             with col2:
-                if st.session_state.results.get('LOM') is not None:
-                    lom_value = st.session_state.results['LOM']
+                if st.session_state.results.get('mean_LOM') is not None:
+                    lom_value = st.session_state.results['mean_LOM']
                     m_value = st.session_state.results.get('m', 'N/A')
                     
                     st.markdown(f"""
                     <div class="metric-card">
                         <h3>Level of Maturity (LOM)</h3>
-                        <p>{lom_value if lom_value is None else f'{lom_value:.2f}'}</p>
+                        <p>{'N/A' if lom_value is None else f'{lom_value:.2f}'}</p>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -384,6 +390,7 @@ def main():
                     'TOC': st.session_state.results['TOC'],
                     'DeltaLogR': st.session_state.results['DeltaLog'],
                     'LOM': st.session_state.results['LOM'],
+                    'Mean_LOM': st.session_state.results['mean_LOM'],
                     'Cementation_Exponent': st.session_state.results['m']
                 })
                 
