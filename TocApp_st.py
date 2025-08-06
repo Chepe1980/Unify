@@ -67,6 +67,24 @@ def load_excel(file):
         st.error(f"Error reading Excel file: {str(e)}")
         return None
 
+def clean_data(df):
+    """Clean and validate input data"""
+    try:
+        # Replace negative values with NaN
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        df[numeric_cols] = df[numeric_cols].apply(lambda x: np.where(x < 0, np.nan, x))
+        
+        # Forward fill missing values for certain columns
+        fill_cols = ['resistivity', 'density', 'porosity', 'youngs_modulus', 'poissons_ratio']
+        for col in fill_cols:
+            if col in df.columns:
+                df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
+        
+        return df
+    except Exception as e:
+        st.error(f"Data cleaning error: {str(e)}")
+        return df
+
 def detect_columns(df):
     """Identify required columns with flexible naming"""
     col_map = {
@@ -133,11 +151,21 @@ def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
         TOC = DeltaLog * 10 * np.exp(a)
         TOC = np.clip(TOC, 0, 100)  # Ensure TOC between 0-100%
         
-        return TOC, DeltaLog, LOM, m
+        return {
+            'TOC': TOC,
+            'DeltaLog': DeltaLog,
+            'LOM': LOM,
+            'm': m
+        }
     
     except Exception as e:
         st.error(f"TOC calculation error: {str(e)}")
-        return None, None, None, None
+        return {
+            'TOC': None,
+            'DeltaLog': None,
+            'LOM': None,
+            'm': None
+        }
 
 def calculate_brittleness_rickman(YM, PR):
     """Calculate brittleness using Rickman method"""
@@ -191,6 +219,7 @@ def main():
             if well_file:
                 st.session_state.data = load_excel(well_file)
                 if st.session_state.data is not None:
+                    st.session_state.data = clean_data(st.session_state.data)
                     st.session_state.col_map = detect_columns(st.session_state.data)
                     st.success("Well data loaded successfully!")
         
@@ -199,12 +228,14 @@ def main():
             if toc_file:
                 st.session_state.toc_data = load_excel(toc_file)
                 if st.session_state.toc_data is not None:
+                    st.session_state.toc_data = clean_data(st.session_state.toc_data)
                     st.success("TOC data loaded successfully!")
             
             xrd_file = st.file_uploader("Upload XRD Data (Excel - Optional)", type=['xlsx', 'xls'])
             if xrd_file:
                 st.session_state.xrd_data = load_excel(xrd_file)
                 if st.session_state.xrd_data is not None:
+                    st.session_state.xrd_data = clean_data(st.session_state.xrd_data)
                     st.success("XRD data loaded successfully!")
     
     # Show detected columns
@@ -266,41 +297,48 @@ def main():
                 
                 if st.button("Calculate TOC", key="calc_toc"):
                     with st.spinner('Calculating TOC...'):
-                        TOC, DeltaLog, LOM, m = calculate_toc(
+                        results = calculate_toc(
                             st.session_state.data,
                             st.session_state.col_map,
                             Ro, Rtbaseline, Rhobaseline
                         )
                         
-                        if TOC is not None:
-                            st.session_state.results.update({
-                                'TOC': TOC,
-                                'DeltaLog': DeltaLog,
-                                'LOM': LOM,
-                                'm': m
-                            })
+                        if results['TOC'] is not None:
+                            st.session_state.results.update(results)
                             st.success("TOC calculation completed!")
+            
             with col2:
-    if st.session_state.results.get('LOM') is not None:
-        lom_value = st.session_state.results['LOM']
-        m_value = st.session_state.results.get('m', 'N/A')
-        
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>Level of Maturity (LOM)</h3>
-            <p>{lom_value if lom_value is None else f'{lom_value:.2f}'}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>Cementation Exponent (m)</h3>
-            <p>{m_value if m_value is None or isinstance(m_value, str) else f'{m_value:.2f}'}</p>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.warning("Calculate TOC first to see LOM and cementation exponent values")
-
+                if st.session_state.results.get('LOM') is not None:
+                    lom_value = st.session_state.results['LOM']
+                    m_value = st.session_state.results.get('m', 'N/A')
+                    
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>Level of Maturity (LOM)</h3>
+                        <p>{lom_value if lom_value is None else f'{lom_value:.2f}'}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>Cementation Exponent (m)</h3>
+                        <p>{m_value if m_value is None or isinstance(m_value, str) else f'{m_value:.2f}'}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.warning("Calculate TOC first to see LOM and cementation exponent values")
+                
+                st.markdown("**TOC Correction**")
+                slope = st.number_input("Correction Slope", value=1.0, step=0.1)
+                intercept = st.number_input("Correction Intercept", value=0.0, step=0.1)
+                
+                if st.button("Apply TOC Correction", key="correct_toc"):
+                    if st.session_state.results['TOC'] is not None:
+                        corrected_toc = slope * st.session_state.results['TOC'] + intercept
+                        st.session_state.results['TOC_corrected'] = corrected_toc
+                        st.success("TOC correction applied!")
+                    else:
+                        st.error("Please calculate TOC first before applying correction")
     
     # Display TOC Results
     if st.session_state.results['TOC'] is not None:
@@ -314,7 +352,7 @@ def main():
             
             # TOC Plot
             ax1.plot(st.session_state.results['TOC'], depth, 'k-', label='TOC Passey')
-            if 'TOC_corrected' in st.session_state.results:
+            if st.session_state.results.get('TOC_corrected') is not None:
                 ax1.plot(st.session_state.results['TOC_corrected'], depth, 'r-', label='Corrected TOC')
             if st.session_state.toc_data is not None:
                 ax1.scatter(st.session_state.toc_data.iloc[:, 1], 
@@ -349,7 +387,7 @@ def main():
                     'Cementation_Exponent': st.session_state.results['m']
                 })
                 
-                if 'TOC_corrected' in st.session_state.results:
+                if st.session_state.results.get('TOC_corrected') is not None:
                     output_df['TOC_Corrected'] = st.session_state.results['TOC_corrected']
                 
                 # CSV Export
@@ -410,11 +448,11 @@ def main():
                         except Exception as e:
                             st.error(f"Wang brittleness calculation error: {str(e)}")
             
-            if st.session_state.results['BI'] is not None:
+            if st.session_state.results.get('BI') is not None:
                 st.markdown(f"""
                 <div class="metric-card">
-                    <h3>Brittleness Index ({st.session_state.results['brittle_method']} Method)</h3>
-                    <p>Range: {np.min(st.session_state.results['BI']):.2f} to {np.max(st.session_state.results['BI']):.2f}</p>
+                    <h3>Brittleness Index ({st.session_state.results.get('brittle_method', 'Unknown')} Method)</h3>
+                    <p>Range: {np.nanmin(st.session_state.results['BI']):.2f} to {np.nanmax(st.session_state.results['BI']):.2f}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -428,7 +466,7 @@ def main():
                 ax.plot(st.session_state.results['BI'], depth, 'r-')
                 ax.set_xlabel('Brittleness Index')
                 ax.set_ylabel('Depth (m)' if 'depth' in st.session_state.col_map else 'Index')
-                ax.set_title(f'Brittleness Profile ({st.session_state.results["brittle_method"]} Method)')
+                ax.set_title(f'Brittleness Profile ({st.session_state.results.get("brittle_method", "Unknown")} Method)')
                 ax.grid(True)
                 if 'depth' in st.session_state.col_map:
                     ax.invert_yaxis()
@@ -476,7 +514,7 @@ def main():
             
             if ('youngs_modulus' in st.session_state.col_map and 
                 'poissons_ratio' in st.session_state.col_map and 
-                st.session_state.results['BI'] is not None):
+                st.session_state.results.get('BI') is not None):
                 
                 if st.button("Generate 3D Plot", key="gen_3dplot"):
                     with st.spinner('Generating 3D plot...'):
@@ -488,7 +526,7 @@ def main():
                             y = st.session_state.data[st.session_state.col_map['youngs_modulus']].values
                             z = st.session_state.results['BI']
                             
-                            if st.session_state.results['TOC'] is not None:
+                            if st.session_state.results.get('TOC') is not None:
                                 sc = ax.scatter(x, y, z, c=st.session_state.results['TOC'], cmap='viridis', s=40)
                                 fig.colorbar(sc, ax=ax, label='TOC')
                             else:
