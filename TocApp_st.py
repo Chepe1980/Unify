@@ -70,44 +70,68 @@ def load_excel(file):
 def detect_columns(df):
     """Identify required columns with flexible naming"""
     col_map = {
-        'depth': ['depth', 'dept', 'md', 'measured depth'],
-        'resistivity': ['rt', 'resistivity', 'resist', 'ild'],
-        'density': ['rho', 'density', 'den', 'rhob'],
-        'porosity': ['phie', 'phi', 'porosity', 'nphi'],
-        'youngs_modulus': ['ym', 'youngs modulus', 'youngs_modulus', 'e'],
-        'poissons_ratio': ['pr', 'poissons ratio', 'poissons_ratio', 'v']
+        'depth': ['depth', 'dept', 'md', 'measured depth', 'depth(m)', 'depth (m)'],
+        'resistivity': ['rt', 'resistivity', 'resist', 'ild', 'resistivity(ohm.m)', 'resist(ohm.m)'],
+        'density': ['rho', 'density', 'den', 'rhob', 'density(g/cc)', 'den(g/cc)'],
+        'porosity': ['phie', 'phi', 'porosity', 'nphi', 'phi_e', 'phie(%)'],
+        'youngs_modulus': ['ym', 'youngs modulus', 'youngs_modulus', 'e', 'youngs'],
+        'poissons_ratio': ['pr', 'poissons ratio', 'poissons_ratio', 'v', 'nu']
     }
     
     detected = {}
+    df_cols_lower = [col.lower().strip() for col in df.columns]
+    
     for col_type, possible_names in col_map.items():
         for name in possible_names:
-            if name.lower() in [c.lower() for c in df.columns]:
-                detected[col_type] = name
+            if name.lower() in df_cols_lower:
+                # Get the original column name with correct case
+                original_name = df.columns[df_cols_lower.index(name.lower())]
+                detected[col_type] = original_name
                 break
     
     return detected
 
 def calculate_toc(data, col_map, Ro, Rtbaseline, Rhobaseline):
-    """Calculate TOC using Passey method"""
+    """Calculate TOC using Passey method with robust error handling"""
     try:
-        Rt = np.array(data[col_map['resistivity']]).astype(float)
-        Rho = np.array(data[col_map['density']]).astype(float)
+        # Validate inputs
+        if not all(k in col_map for k in ['resistivity', 'density']):
+            raise ValueError("Missing required columns (resistivity and density)")
+        
+        # Get data with validation
+        Rt = np.array(data[col_map['resistivity']], dtype=float)
+        Rho = np.array(data[col_map['density']], dtype=float)
+        
+        # Handle zeros in resistivity
+        if np.any(Rt <= 0):
+            st.warning("Negative or zero resistivity values found. Using absolute values.")
+            Rt = np.abs(Rt)
         
         # Calculate cementation exponent (m)
-        Phie = data[col_map['porosity']].values if 'porosity' in col_map else None
-        m = 1.20 + 12.76 * Phie if Phie is not None else 2.0
+        m = 2.0  # Default value
+        if 'porosity' in col_map:
+            try:
+                Phie = np.array(data[col_map['porosity']], dtype=float)
+                Phie = np.clip(Phie, 0.01, 0.40)  # Reasonable porosity range
+                m = 1.20 + 12.76 * Phie
+            except Exception as e:
+                st.warning(f"Porosity calculation failed, using default m=2.0. Error: {str(e)}")
         
-        # Calculate LOM
+        # Calculate LOM with safeguards
         exp_term = np.exp(1 - 2.778 * Ro)
         denominator = 0.59 + 0.41 * (exp_term ** 28.45)
+        denominator = np.maximum(denominator, 1e-6)  # Prevent division by zero
         LOM = 8.18 * (Ro / denominator) ** (1 / m)
+        LOM = np.clip(LOM, 5, 15)  # Reasonable LOM range
         
-        # Calculate DeltaLogR
+        # Calculate DeltaLogR with safeguards
         DeltaLog = np.log10(Rt / Rtbaseline) + 2.5 * (Rho - Rhobaseline)
+        DeltaLog = np.nan_to_num(DeltaLog, nan=0.0, posinf=10, neginf=-10)
         
-        # Calculate TOC
+        # Calculate TOC with safeguards
         a = 0.0297 - 0.1688 * LOM
         TOC = DeltaLog * 10 * np.exp(a)
+        TOC = np.clip(TOC, 0, 100)  # Ensure TOC between 0-100%
         
         return TOC, DeltaLog, LOM, m
     
@@ -138,7 +162,7 @@ def calculate_brittleness_rickman(YM, PR):
 def main():
     st.title("⛏️ PasseyToc - TOC and Brittleness Analysis")
     
-    # Initialize session state
+    # Initialize session state with default values
     if 'data' not in st.session_state:
         st.session_state.data = None
     if 'toc_data' not in st.session_state:
@@ -224,12 +248,21 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                Ro = st.number_input("Vitrinite Reflectance (Ro)", 
-                                   min_value=0.1, max_value=5.0, value=0.5, step=0.1)
-                Rtbaseline = st.number_input("Resistivity Baseline (Rtbaseline)", 
-                                           min_value=0.1, value=5.0, step=0.1)
-                Rhobaseline = st.number_input("Density Baseline (Rhobaseline)", 
-                                            min_value=1.0, max_value=3.0, value=2.65, step=0.01)
+                Ro = st.number_input(
+                    "Vitrinite Reflectance (Ro)", 
+                    min_value=0.1, max_value=5.0, value=0.5, step=0.1,
+                    help="Maturity indicator. Typical values: 0.5-1.0 for oil window, 1.0-1.3 for wet gas, >1.3 for dry gas"
+                )
+                Rtbaseline = st.number_input(
+                    "Resistivity Baseline (Rtbaseline)", 
+                    min_value=0.1, value=5.0, step=0.1,
+                    help="Resistivity value in non-source rock intervals (ohm-m)"
+                )
+                Rhobaseline = st.number_input(
+                    "Density Baseline (Rhobaseline)", 
+                    min_value=1.0, max_value=3.0, value=2.65, step=0.01,
+                    help="Density value in non-source rock intervals (g/cc)"
+                )
                 
                 if st.button("Calculate TOC", key="calc_toc"):
                     with st.spinner('Calculating TOC...'):
@@ -249,7 +282,7 @@ def main():
                             st.success("TOC calculation completed!")
             
             with col2:
-                if st.session_state.results.get('LOM') is not None:
+                if st.session_state.results['LOM'] is not None:
                     st.markdown(f"""
                     <div class="metric-card">
                         <h3>Level of Maturity (LOM)</h3>
@@ -271,7 +304,7 @@ def main():
                 intercept = st.number_input("Correction Intercept", value=0.0, step=0.1)
                 
                 if st.button("Apply TOC Correction", key="correct_toc"):
-                    if st.session_state.results.get('TOC') is not None:
+                    if st.session_state.results['TOC'] is not None:
                         corrected_toc = slope * st.session_state.results['TOC'] + intercept
                         st.session_state.results['TOC_corrected'] = corrected_toc
                         st.success("TOC correction applied!")
@@ -279,7 +312,7 @@ def main():
                         st.error("Please calculate TOC first before applying correction")
     
     # Display TOC Results
-    if st.session_state.results.get('TOC') is not None:
+    if st.session_state.results['TOC'] is not None:
         with st.expander("📊 TOC Results", expanded=True):
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
             
@@ -290,7 +323,7 @@ def main():
             
             # TOC Plot
             ax1.plot(st.session_state.results['TOC'], depth, 'k-', label='TOC Passey')
-            if st.session_state.results.get('TOC_corrected') is not None:
+            if 'TOC_corrected' in st.session_state.results:
                 ax1.plot(st.session_state.results['TOC_corrected'], depth, 'r-', label='Corrected TOC')
             if st.session_state.toc_data is not None:
                 ax1.scatter(st.session_state.toc_data.iloc[:, 1], 
@@ -325,7 +358,7 @@ def main():
                     'Cementation_Exponent': st.session_state.results['m']
                 })
                 
-                if st.session_state.results.get('TOC_corrected') is not None:
+                if 'TOC_corrected' in st.session_state.results:
                     output_df['TOC_Corrected'] = st.session_state.results['TOC_corrected']
                 
                 # CSV Export
@@ -386,7 +419,7 @@ def main():
                         except Exception as e:
                             st.error(f"Wang brittleness calculation error: {str(e)}")
             
-            if st.session_state.results.get('BI') is not None:
+            if st.session_state.results['BI'] is not None:
                 st.markdown(f"""
                 <div class="metric-card">
                     <h3>Brittleness Index ({st.session_state.results['brittle_method']} Method)</h3>
@@ -452,7 +485,7 @@ def main():
             
             if ('youngs_modulus' in st.session_state.col_map and 
                 'poissons_ratio' in st.session_state.col_map and 
-                st.session_state.results.get('BI') is not None):
+                st.session_state.results['BI'] is not None):
                 
                 if st.button("Generate 3D Plot", key="gen_3dplot"):
                     with st.spinner('Generating 3D plot...'):
@@ -464,7 +497,7 @@ def main():
                             y = st.session_state.data[st.session_state.col_map['youngs_modulus']].values
                             z = st.session_state.results['BI']
                             
-                            if st.session_state.results.get('TOC') is not None:
+                            if st.session_state.results['TOC'] is not None:
                                 sc = ax.scatter(x, y, z, c=st.session_state.results['TOC'], cmap='viridis', s=40)
                                 fig.colorbar(sc, ax=ax, label='TOC')
                             else:
@@ -512,9 +545,9 @@ def main():
         
         ### Column Naming:
         The tool automatically detects columns with common names:
-        - Resistivity: Rt, Resistivity, Resist, ILD
-        - Density: Rho, Density, Den, RHOB
-        - Porosity: Phie, Phi, Porosity, NPHI
+        - Resistivity: Rt, Resistivity, Resist, ILD, resistivity(ohm.m)
+        - Density: Rho, Density, Den, RHOB, density(g/cc)
+        - Porosity: Phie, Phi, Porosity, NPHI, phie(%)
         - Young's Modulus: YM, Youngs Modulus, Youngs_modulus, E
         - Poisson's Ratio: PR, Poissons Ratio, Poissons_ratio, V
         
