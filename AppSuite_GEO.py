@@ -5,107 +5,145 @@ import sys
 from pathlib import Path
 
 # ===========================================
-# Page Configuration
+# PAGE CONFIGURATION
 # ===========================================
 st.set_page_config(
     page_title="GeoAPPS Hub",
-    page_icon="🛠️",
+    page_icon="🌐",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ===========================================
-# Custom CSS Styling
+# CUSTOM CSS STYLING
 # ===========================================
-def local_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+def inject_css():
+    st.markdown("""
+    <style>
+        /* Main container */
+        .main {
+            background-color: #f5f5f5;
+            padding: 2rem;
+        }
+        
+        /* Sidebar styling */
+        .sidebar .sidebar-content {
+            background: linear-gradient(180deg, #2c3e50 0%, #1a2530 100%);
+            color: white;
+        }
+        
+        /* Logo styling */
+        .logo-container {
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid #444;
+        }
+        
+        /* Module cards */
+        .module-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+            transition: transform 0.2s;
+        }
+        
+        .module-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        /* Buttons */
+        .stButton>button {
+            background: linear-gradient(90deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+        
+        /* Titles */
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Create a style.css file or add these styles directly
-st.markdown("""
-<style>
-    .main {
-        background-color: #f8f9fa;
-    }
-    .sidebar .sidebar-content {
-        background-color: #343a40;
-        color: white;
-    }
-    .logo-img {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-        width: 80%;
-        padding: 10px;
-    }
-    .module-title {
-        color: #2c3e50;
-        font-size: 24px;
-        font-weight: bold;
-        margin-bottom: 20px;
-    }
-    .module-description {
-        color: #7f8c8d;
-        font-size: 16px;
-        margin-bottom: 30px;
-    }
-    .stButton>button {
-        background-color: #3498db;
-        color: white;
-        border-radius: 5px;
-        padding: 10px 24px;
-    }
-    .footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        text-align: center;
-        padding: 10px;
-        background-color: white;
-        font-size: 12px;
-    }
-</style>
-""", unsafe_allow_html=True)
+inject_css()
 
 # ===========================================
-# Sidebar with Logo and Navigation
+# SIDEBAR LAYOUT
 # ===========================================
 with st.sidebar:
-    # Load your logo image (replace with your actual image path)
+    # Logo section
+    st.markdown('<div class="logo-container">', unsafe_allow_html=True)
     try:
-        logo = Image.open("logoApps.JPEGJ")  # Replace with your logo path
-        st.image(logo, use_column_width=True, caption="GeoAPPS Hub")
+        logo = Image.open("logoApps.png")
+        st.image(logo, use_column_width=True)
     except:
-        st.warning("Logo image not found. Using placeholder.")
-        # Placeholder if logo not found
         st.title("GeoAPPS Hub")
-    
-    st.markdown("---")
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Navigation
-    st.subheader("Application Modules")
+    st.markdown("## Navigation")
     app_mode = st.selectbox(
         "Select Module",
-        ["Home", "AVAzMOD", "GeoStressMOD", "PasseyTOCMOD", "Machine Learning Algorithms"],
+        ["Home", "AVAzMOD", "GeoStressMOD", "PasseyTOCMOD", "Machine Learning"],
         label_visibility="collapsed"
     )
     
+    # About section
     st.markdown("---")
-    st.markdown("### About")
-    st.info("""
-    GeoAPPS Hub provides integrated geoscience tools 
-    for advanced analysis and modeling.
+    st.markdown("""
+    **About GeoAPPS Hub**  
+    Integrated geoscience tools for advanced analysis  
+    Version 1.0.0  
+    [Contact Support](mailto:support@geoapps.com)
     """)
 
 # ===========================================
-# Main Content Area
+# MODULE LOADING FUNCTION
+# ===========================================
+def load_module(module_name, function_name="main"):
+    """Dynamically loads a module and executes its main function"""
+    try:
+        file_path = Path(f"modules/{module_name}.py")
+        
+        if not file_path.exists():
+            st.error(f"Module file not found: {file_path}")
+            return False
+            
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        
+        if not hasattr(module, function_name):
+            st.error(f"Module '{module_name}' is missing required function '{function_name}()'")
+            available = [f for f in dir(module) if not f.startswith('__')]
+            st.info(f"Available functions: {', '.join(available)}")
+            return False
+            
+        # Execute the module's main function
+        getattr(module, function_name)()
+        return True
+        
+    except Exception as e:
+        st.error(f"Error loading {module_name} module")
+        st.exception(e)
+        return False
+
+# ===========================================
+# MAIN CONTENT AREA
 # ===========================================
 if app_mode == "Home":
     st.title("Welcome to GeoAPPS Hub")
     st.markdown("---")
     
-    # Hero Section
+    # Hero section
     col1, col2 = st.columns([2, 1])
     with col1:
         st.markdown("""
@@ -113,79 +151,82 @@ if app_mode == "Home":
         Access specialized tools for advanced geoscience analysis, 
         modeling, and machine learning applications.
         """)
-        st.markdown("""
-        Select a module from the sidebar to get started with your analysis.
-        """)
         
     with col2:
         try:
-            hero_img = Image.open("hero_image.jpg")  # Replace with your image
+            hero_img = Image.open("assets/hero_image.jpg")
             st.image(hero_img, use_column_width=True)
         except:
-            st.image("https://via.placeholder.com/400x250", use_column_width=True)
+            st.image("https://via.placeholder.com/500x300?text=GeoAPP+Hero+Image", 
+                    use_column_width=True)
     
-    # Module Cards
+    # Module showcase
     st.markdown("## Available Modules")
     st.markdown("---")
     
-    cols = st.columns(4)
     modules = [
-        ("AVAzMOD", "Azimuthal Velocity Analysis", "📊"),
-        ("GeoStressMOD", "Geomechanical Stress Analysis", "⚙️"),
-        ("PasseyTOCMOD", "TOC Calculation", "📈"),
-        ("Machine Learning", "Advanced ML Algorithms", "🤖")
+        {
+            "name": "AVAzMOD",
+            "icon": "🧭",
+            "description": "Azimuthal Velocity Analysis for fracture characterization",
+            "color": "#3498db"
+        },
+        {
+            "name": "GeoStressMOD",
+            "icon": "⚙️",
+            "description": "Geomechanical stress analysis and modeling",
+            "color": "#e74c3c"
+        },
+        {
+            "name": "PasseyTOCMOD",
+            "icon": "📊",
+            "description": "Total Organic Carbon calculation using ΔLogR method",
+            "color": "#2ecc71"
+        },
+        {
+            "name": "Machine Learning",
+            "icon": "🤖",
+            "description": "Advanced ML algorithms for geoscience applications",
+            "color": "#9b59b6"
+        }
     ]
     
-    for col, (name, desc, icon) in zip(cols, modules):
-        with col:
-            st.markdown(f"### {icon} {name}")
-            st.markdown(f"{desc}")
-            if st.button(f"Go to {name}", key=f"btn_{name}"):
-                app_mode = name  # This won't work directly - would need session state
-    
+    cols = st.columns(4)
+    for idx, module in enumerate(modules):
+        with cols[idx]:
+            st.markdown(f"""
+            <div class="module-card" style="border-top: 4px solid {module['color']}">
+                <h3>{module['icon']} {module['name']}</h3>
+                <p>{module['description']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
 else:
-    # Module loading with improved error handling
-    st.markdown(f"# {app_mode}")
+    # Module loading logic
+    st.title(f"{app_mode}")
     st.markdown("---")
     
-    module_map = {
-        "AVAzMOD": "AVAzAPP",
-        "GeoStressMOD": "GeoMechApp",
-        "PasseyTOCMOD": "TocApp_st",
-        "Machine Learning Algorithms": "MLalgorithms"
+    module_mapping = {
+        "AVAzMOD": ("AVAzAPP", "main"),
+        "GeoStressMOD": ("GeoMechApp", "main"),
+        "PasseyTOCMOD": ("TocApp", "main"),
+        "Machine Learning": ("MLalgorithms", "main")
     }
     
-    module_name = module_map.get(app_mode)
-    
-    if module_name:
-        try:
-            file_path = Path(f"{module_name}.py")
-            if not file_path.exists():
-                st.error(f"Module file not found: {file_path.resolve()}")
-            else:
-                with st.spinner(f"Loading {app_mode} module..."):
-                    spec = importlib.util.spec_from_file_location(module_name, file_path)
-                    module = importlib.util.module_from_spec(spec)
-                    sys.modules[module_name] = module
-                    spec.loader.exec_module(module)
-                    
-                    if hasattr(module, 'main'):
-                        module.main()
-                    else:
-                        st.error(f"Module '{module_name}' doesn't have a main() function")
-        except Exception as e:
-            st.error(f"Error loading {app_mode} module")
-            st.exception(e)
+    if app_mode in module_mapping:
+        module_info = module_mapping[app_mode]
+        with st.spinner(f"Loading {app_mode} module..."):
+            if not load_module(module_info[0], module_info[1]):
+                st.warning(f"Failed to load {app_mode} module. Check the error messages above.")
     else:
-        st.error("Module mapping not found")
+        st.error("Module configuration error: Unknown module selected")
 
-# Footer
+# ===========================================
+# FOOTER
+# ===========================================
 st.markdown("---")
 st.markdown("""
-<div class="footer">
-    <p>© 2023 GeoAPPS Hub | Version 1.0 | <a href="#">Contact Support</a></p>
+<div style="text-align: center; padding: 1rem; color: #7f8c8d; font-size: 0.9rem;">
+    © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
-
-
-
