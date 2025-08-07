@@ -1,4 +1,4 @@
-import streamlit as st
+echAppimport streamlit as st
 from PIL import Image
 import importlib.util
 import sys
@@ -208,9 +208,9 @@ else:
     
     module_mapping = {
         "AVAzMOD": ("AVAzAPP", "main"),
-        "GeoStressMOD": ("geostress_mod", "main"),
-        "PasseyTOCMOD": ("passeytoc_mod", "main"),
-        "Machine Learning": ("ml_algorithms", "main")
+        "GeoStressMOD": ("GeoMechApp", "main"),
+        "PasseyTOCMOD": ("TocApp_st", "main"),
+        "Machine Learning": ("MLalgorithms", "main")
     }
     
     if app_mode in module_mapping:
@@ -230,6 +230,7 @@ st.markdown("""
     © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
