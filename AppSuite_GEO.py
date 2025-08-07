@@ -1,4 +1,4 @@
-echAppimport streamlit as st
+import streamlit as st
 from PIL import Image
 import importlib.util
 import sys
@@ -230,6 +230,7 @@ st.markdown("""
     © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
