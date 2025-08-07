@@ -140,7 +140,7 @@ def load_module(module_name, function_name="main"):
 # MAIN CONTENT AREA
 # ===========================================
 if app_mode == "Home":
-    st.title("Welcome to GeoAPPS Hub")
+    st.title("Welcome to GeoAPPS Hub developed By PhD. J.A. Guerrero Castro")
     st.markdown("---")
     
     # Hero section
@@ -230,4 +230,5 @@ st.markdown("""
     © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
+
 
