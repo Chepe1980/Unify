@@ -74,7 +74,7 @@ st.markdown("""
 with st.sidebar:
     # Load your logo image (replace with your actual image path)
     try:
-        logo = Image.open("logo.png")  # Replace with your logo path
+        logo = Image.open("logoApps.JPEGJ")  # Replace with your logo path
         st.image(logo, use_column_width=True, caption="GeoAPPS Hub")
     except:
         st.warning("Logo image not found. Using placeholder.")
@@ -186,5 +186,6 @@ st.markdown("""
     <p>© 2023 GeoAPPS Hub | Version 1.0 | <a href="#">Contact Support</a></p>
 </div>
 """, unsafe_allow_html=True)
+
 
 
