@@ -3,6 +3,7 @@ from PIL import Image
 import importlib.util
 import sys
 from pathlib import Path
+import os
 
 # ===========================================
 # PAGE CONFIGURATION
@@ -69,10 +70,99 @@ def inject_css():
             border-bottom: 2px solid #3498db;
             padding-bottom: 0.5rem;
         }
+        
+        /* Error messages */
+        .stAlert {
+            border-left: 4px solid #e74c3c;
+        }
     </style>
     """, unsafe_allow_html=True)
 
 inject_css()
+
+# ===========================================
+# MODULE LOADING SYSTEM (IMPROVED)
+# ===========================================
+def create_placeholder_module(module_path, module_name):
+    """Creates a placeholder module if it doesn't exist"""
+    placeholder_code = f'''# {module_name} placeholder
+import streamlit as st
+
+def main():
+    """Placeholder module for {module_name}"""
+    st.title("{module_name.replace('_', ' ').title()} Module")
+    st.image("https://via.placeholder.com/800x400?text={module_name}+Module", 
+             use_column_width=True)
+    st.warning("This is a placeholder module")
+    st.info("The actual implementation will go here")
+    
+    if st.button("Sample Button"):
+        st.success("Button clicked!")
+
+    st.markdown("### Sample DataFrame")
+    import pandas as pd
+    import numpy as np
+    df = pd.DataFrame(np.random.randn(10, 3), columns=['A', 'B', 'C'])
+    st.dataframe(df)
+'''
+    with open(module_path, 'w') as f:
+        f.write(placeholder_code)
+
+def load_module(module_name, function_name="main"):
+    """Improved module loader with better error handling and placeholder creation"""
+    try:
+        # Try multiple possible locations
+        possible_locations = [
+            Path("modules"),  # ./modules/
+            Path("."),        # current directory
+            Path("src/modules")  # ./src/modules/
+        ]
+        
+        module_path = None
+        for location in possible_locations:
+            potential_path = location / f"{module_name}.py"
+            if potential_path.exists():
+                module_path = potential_path
+                break
+        
+        # If not found, create a placeholder in the modules directory
+        if not module_path:
+            modules_dir = Path("modules")
+            modules_dir.mkdir(exist_ok=True)
+            module_path = modules_dir / f"{module_name}.py"
+            create_placeholder_module(module_path, module_name)
+            st.warning(f"Created placeholder module at {module_path}")
+        
+        # Debug information
+        debug_expander = st.expander("Debug Information", expanded=False)
+        with debug_expander:
+            st.write(f"Loading module from: {module_path}")
+            st.write("Current working directory:", os.getcwd())
+            st.write("Directory contents:", os.listdir())
+            if Path("modules").exists():
+                st.write("Modules directory contents:", os.listdir("modules"))
+        
+        # Load the module
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        
+        if not hasattr(module, function_name):
+            available_functions = [f for f in dir(module) if not f.startswith('_')]
+            raise AttributeError(
+                f"Module '{module_name}' is missing required function '{function_name}()'\n"
+                f"Available functions: {', '.join(available_functions)}"
+            )
+        
+        # Execute the module's main function
+        getattr(module, function_name)()
+        return True
+        
+    except Exception as e:
+        st.error(f"Error loading {module_name} module")
+        st.exception(e)
+        return False
 
 # ===========================================
 # SIDEBAR LAYOUT
@@ -103,38 +193,6 @@ with st.sidebar:
     Version 1.0.0  
     [Contact Support](mailto:alfredoguerrero1980@gmail.com)
     """)
-
-# ===========================================
-# MODULE LOADING FUNCTION
-# ===========================================
-def load_module(module_name, function_name="main"):
-    """Dynamically loads a module and executes its main function"""
-    try:
-        file_path = Path(f"modules/{module_name}.py")
-        
-        if not file_path.exists():
-            st.error(f"Module file not found: {file_path}")
-            return False
-            
-        spec = importlib.util.spec_from_file_location(module_name, file_path)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-        
-        if not hasattr(module, function_name):
-            st.error(f"Module '{module_name}' is missing required function '{function_name}()'")
-            available = [f for f in dir(module) if not f.startswith('__')]
-            st.info(f"Available functions: {', '.join(available)}")
-            return False
-            
-        # Execute the module's main function
-        getattr(module, function_name)()
-        return True
-        
-    except Exception as e:
-        st.error(f"Error loading {module_name} module")
-        st.exception(e)
-        return False
 
 # ===========================================
 # MAIN CONTENT AREA
@@ -217,7 +275,10 @@ else:
         module_info = module_mapping[app_mode]
         with st.spinner(f"Loading {app_mode} module..."):
             if not load_module(module_info[0], module_info[1]):
-                st.warning(f"Failed to load {app_mode} module. Check the error messages above.")
+                st.error(f"Failed to load {app_mode} module. Please check:")
+                st.error(f"- File exists: modules/{module_info[0]}.py")
+                st.error(f"- Contains function: {module_info[1]}()")
+                st.error(f"- No syntax errors in the module file")
     else:
         st.error("Module configuration error: Unknown module selected")
 
@@ -230,11 +291,3 @@ st.markdown("""
     © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
-
-
-
-
-
-
-
-
