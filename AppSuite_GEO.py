@@ -101,7 +101,7 @@ with st.sidebar:
     **About GeoAPPS Hub**  
     Integrated geoscience tools for advanced analysis  
     Version 1.0.0  
-    [Contact Support](mailto:support@geoapps.com)
+    [Contact Support](mailto:alfredoguerrero1980@gmail.com)
     """)
 
 # ===========================================
@@ -230,5 +230,6 @@ st.markdown("""
     © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
+
 
 
