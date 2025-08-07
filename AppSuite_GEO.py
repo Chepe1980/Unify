@@ -207,7 +207,7 @@ else:
     st.markdown("---")
     
     module_mapping = {
-        "AVAzMOD": ("AVAzAPP.py", "main"),
+        "AVAzMOD": ("AVAzAPP", "main"),
         "GeoStressMOD": ("geostress_mod", "main"),
         "PasseyTOCMOD": ("passeytoc_mod", "main"),
         "Machine Learning": ("ml_algorithms", "main")
@@ -230,6 +230,7 @@ st.markdown("""
     © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
