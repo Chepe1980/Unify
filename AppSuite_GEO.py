@@ -168,25 +168,25 @@ if app_mode == "Home":
         {
             "name": "AVAzMOD",
             "icon": "🧭",
-            "description": "Azimuthal Velocity Analysis for fracture characterization",
+            "description": "Azimuthal Velocity Analysis for fracture characterization and Fluid Substitution in shale rocks",
             "color": "#3498db"
         },
         {
             "name": "GeoStressMOD",
             "icon": "⚙️",
-            "description": "Geomechanical stress analysis and modeling",
+            "description": "Geomechanical stress analysis and modeling of Hoop Stress wellbore",
             "color": "#e74c3c"
         },
         {
             "name": "PasseyTOCMOD",
             "icon": "📊",
-            "description": "Total Organic Carbon calculation using ΔLogR method",
+            "description": "Total Organic Carbon calculation using ΔLogR method of Passey´s method",
             "color": "#2ecc71"
         },
         {
             "name": "Machine Learning",
             "icon": "🤖",
-            "description": "Advanced ML algorithms for geoscience applications",
+            "description": "Advanced ML algorithms for geoscience applications Sonic Log Prediction",
             "color": "#9b59b6"
         }
     ]
@@ -230,3 +230,4 @@ st.markdown("""
     © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
+
