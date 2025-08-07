@@ -207,10 +207,10 @@ else:
     st.markdown("---")
     
     module_mapping = {
-        "AVAzMOD": ("AVAzAPP", "main"),
-        "GeoStressMOD": ("GeoMechApp", "main"),
-        "PasseyTOCMOD": ("TocApp", "main"),
-        "Machine Learning": ("MLalgorithms", "main")
+        "AVAzMOD": ("avaz_mod", "main"),
+        "GeoStressMOD": ("geostress_mod", "main"),
+        "PasseyTOCMOD": ("passeytoc_mod", "main"),
+        "Machine Learning": ("ml_algorithms", "main")
     }
     
     if app_mode in module_mapping:
@@ -230,6 +230,7 @@ st.markdown("""
     © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
