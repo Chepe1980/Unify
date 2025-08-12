@@ -13,6 +13,8 @@ plotly
 openpyxl
 xlsxwriter
 scipy
+PyWavelets
+
 
 
 
