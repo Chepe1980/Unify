@@ -14,6 +14,8 @@ openpyxl
 xlsxwriter
 scipy
 PyWavelets
+pyavo
+
 
 
 
