@@ -246,7 +246,6 @@ if app_mode == "Home":
             "icon": "🤖",
             "description": "Advanced ML algorithms for geoscience applications Sonic Log Prediction",
             "color": "#9b59b6"
-
         },
         {
             "name": "AVO Rock Physics",
@@ -275,9 +274,9 @@ else:
         "AVAzMOD": ("AVAzAPP", "main"),
         "GeoStressMOD": ("GeoMechApp", "main"),
         "PasseyTOCMOD": ("TocApp_st", "main"),
-        "Machine Learning": ("MLalgorithms", "main")
+        "Machine Learning": ("MLalgorithms", "main"),
         "AVO Rock Physics": ("RPTAVOmod", "main")
-         }
+    }
     
     if app_mode in module_mapping:
         module_info = module_mapping[app_mode]
