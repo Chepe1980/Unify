@@ -277,7 +277,7 @@ else:
         "PasseyTOCMOD": ("TocApp_st", "main"),
         "Machine Learning": ("MLalgorithms", "main")
         "AVO Rock Physics": ("RPTAVOmod", "main")
-    }
+         }
     
     if app_mode in module_mapping:
         module_info = module_mapping[app_mode]
