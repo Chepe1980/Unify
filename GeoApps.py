@@ -217,7 +217,7 @@ if app_mode == "Home":
     with col_dev2:
         try:
             developer_img = Image.open("LogoFull.png")  # Make sure this image exists in your directory
-            st.image(developer_img, width=100, caption="PhD. J.A. Guerrero Castro", use_container_width=False, output_format="auto", clamp=False, channels="RGB")
+            st.image(developer_img, width=300, caption="PhD. J.A. Guerrero Castro", use_container_width=False, output_format="auto", clamp=False, channels="RGB")
         except:
             st.warning("Developer photo not found. Please add 'developer_photo.jpg' to your directory.")
     
