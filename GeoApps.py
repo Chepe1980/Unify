@@ -79,8 +79,8 @@ def inject_css():
         /* Developer photo styling */
         .developer-photo {
             border-radius: 20%;
-            width: 30px;
-            height:30px;
+            width: 100px;
+            height:200px;
             object-fit: cover;
             border: 3px solid #3498db;
             margin: 0 auto;
