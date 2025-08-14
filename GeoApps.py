@@ -183,7 +183,7 @@ with st.sidebar:
     st.markdown('<div class="logo-container">', unsafe_allow_html=True)
     try:
         logo = Image.open("logoApps.png")
-        st.image(logo, use_column_width=True)
+        st.image(logo, use_container_width=True)
     except:
         st.title("GeoAPPS Hub")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -217,7 +217,7 @@ if app_mode == "Home":
     with col_dev2:
         try:
             developer_img = Image.open("logoApps.jpeg")  # Make sure this image exists in your directory
-            st.image(developer_img, width=20, caption="PhD. J.A. Guerrero Castro", use_column_width=False, output_format="auto", clamp=False, channels="RGB")
+            st.image(developer_img, width=20, caption="PhD. J.A. Guerrero Castro", use_container_width=False, output_format="auto", clamp=False, channels="RGB")
         except:
             st.warning("Developer photo not found. Please add 'developer_photo.jpg' to your directory.")
     
@@ -233,10 +233,10 @@ if app_mode == "Home":
     with col2:
         try:
             hero_img = Image.open("assets/hero_image.jpg")
-            st.image(hero_img, use_column_width=True)
+            st.image(hero_img, use_container_width=True)
         except:
             st.image("https://via.placeholder.com/500x300?text=GeoAPP+Hero+Image", 
-                    use_column_width=True)
+                    use_container_width=True)
     
     # Module showcase
     st.markdown("## Available Modules")
