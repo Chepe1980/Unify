@@ -216,7 +216,7 @@ if app_mode == "Home":
     col_dev1, col_dev2, col_dev3 = st.columns([1,2,1])
     with col_dev2:
         try:
-            developer_img = Image.open("logoApps.jpg")  # Make sure this image exists in your directory
+            developer_img = Image.open("logoApps.jpeg")  # Make sure this image exists in your directory
             st.image(developer_img, width=20, caption="PhD. J.A. Guerrero Castro", use_column_width=False, output_format="auto", clamp=False, channels="RGB")
         except:
             st.warning("Developer photo not found. Please add 'developer_photo.jpg' to your directory.")
