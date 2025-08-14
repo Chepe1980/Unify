@@ -181,7 +181,7 @@ with st.sidebar:
     st.markdown("## Navigation")
     app_mode = st.selectbox(
         "Select Module",
-        ["Home", "AVAzMOD", "GeoStressMOD", "PasseyTOCMOD", "PetrophysicsMOD", "SeismicMOD", "Machine Learning"],
+        ["Home", "AVAzMOD", "GeoStressMOD", "PasseyTOCMOD", "RockPhysics AVO  & Fluid Substitution", "WedgeMOD", "Machine Learning"],
         label_visibility="collapsed"
     )
     
@@ -242,15 +242,17 @@ if app_mode == "Home":
             "color": "#2ecc71"
         },
         {
-            "name": "PetrophysicsMOD",
+            "name": "RockPhysics AVO  & Fluid Substitution",
             "icon": "🪨",
-            "description": "Comprehensive petrophysical analysis and rock property evaluation",
+            "description": "This app performs rock physics modeling and AVO analysis for brine, oil, and gas scenarios.
+
+",
             "color": "#f39c12"
         },
         {
-            "name": "SeismicMOD",
+            "name": "WedgeMOD",
             "icon": "🌊",
-            "description": "Seismic data processing and interpretation tools",
+            "description": "Advanced Seismic Wedge Modeling tool",
             "color": "#9b59b6"
         },
         {
@@ -291,8 +293,8 @@ else:
         "AVAzMOD": ("AVAzAPP", "main"),
         "GeoStressMOD": ("GeoMechApp", "main"),
         "PasseyTOCMOD": ("TocApp_st", "main"),
-        "PetrophysicsMOD": ("PetroApp", "main"),
-        "SeismicMOD": ("SeismicApp", "main"),
+        "PetrophysicsMOD": ("RPTAVOmod", "main"),
+        "SeismicMOD": ("WedgeModV1_st", "main"),
         "Machine Learning": ("MLalgorithms", "main")
     }
     
