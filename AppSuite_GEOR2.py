@@ -244,7 +244,7 @@ if app_mode == "Home":
         {
             "name": "RockPhysics AVO  & Fluid Substitution",
             "icon": "🪨",
-            "description": "This app performs rock physics modeling and AVO analysis for brine, oil, and gas scenarios.
+            "description": "This app performs rock physics modeling and AVO analysis for brine, oil, and gas scenarios"
 
 ",
             "color": "#f39c12"
