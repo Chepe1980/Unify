@@ -227,47 +227,61 @@ if app_mode == "Home":
             "name": "AVAzMOD",
             "icon": "🧭",
             "description": "Azimuthal Velocity Analysis for fracture characterization and Fluid Substitution in shale rocks",
-            "color": "#3498db"
+            "color": "#3498db",
+            "logo": "modules/logos/avazmod_logo.png"  # New logo field
         },
         {
             "name": "GeoStressMOD",
             "icon": "⚙️",
             "description": "Geomechanical stress analysis and modeling of Hoop Stress wellbore",
-            "color": "#e74c3c"
+            "color": "#e74c3c",
+            "logo": "modules/logos/geostress_logo.png"
         },
         {
             "name": "PasseyTOCMOD",
             "icon": "📊",
             "description": "Total Organic Carbon calculation using ΔLogR method of Passey´s method",
-            "color": "#2ecc71"
+            "color": "#2ecc71",
+            "logo": "modules/logos/passey_logo.png"
         },
         {
-            "name": "RockPhysics AVO  & Fluid Substitution",
+            "name": "RockPhysics AVO & Fluid Substitution",
             "icon": "🪨",
             "description": "This app performs rock physics modeling and AVO analysis for brine, oil, and gas scenarios",
-            "color": "#f39c12"
+            "color": "#f39c12",
+            "logo": "RPTlogo.png"
         },
         {
             "name": "WedgeMOD",
             "icon": "🌊",
             "description": "Advanced Seismic Wedge Modeling tool",
-            "color": "#9b59b6"
+            "color": "#9b59b6",
+            "logo": "modules/logos/wedgemod_logo.png"
         },
         {
             "name": "Machine Learning",
             "icon": "🤖",
             "description": "Advanced ML algorithms for geoscience applications Sonic Log Prediction",
-            "color": "#1abc9c"
+            "color": "#1abc9c",
+            "logo": "modules/logos/ml_logo.png"
         }
     ]
     
-    # Display modules in 2 rows of 3 columns
+    # Display modules in 2 rows of 3 columns with logos
     cols = st.columns(3)
     for idx, module in enumerate(modules[:3]):
         with cols[idx]:
+            # Try to load the logo image, fallback to icon if not found
+            try:
+                logo_img = Image.open(module["logo"])
+                logo_display = f'<img src="{module["logo"]}" width="60" style="border-radius:50%;margin-bottom:10px;">'
+            except:
+                logo_display = f'<div style="font-size:2.5rem;text-align:center;margin-bottom:10px;">{module["icon"]}</div>'
+            
             st.markdown(f"""
-            <div class="module-card" style="border-top: 4px solid {module['color']}">
-                <h3>{module['icon']} {module['name']}</h3>
+            <div class="module-card" style="border-top: 4px solid {module['color']};text-align:center;">
+                {logo_display}
+                <h3>{module['name']}</h3>
                 <p>{module['description']}</p>
             </div>
             """, unsafe_allow_html=True)
@@ -275,9 +289,16 @@ if app_mode == "Home":
     cols = st.columns(3)
     for idx, module in enumerate(modules[3:]):
         with cols[idx]:
+            try:
+                logo_img = Image.open(module["logo"])
+                logo_display = f'<img src="{module["logo"]}" width="60" style="border-radius:50%;margin-bottom:10px;">'
+            except:
+                logo_display = f'<div style="font-size:2.5rem;text-align:center;margin-bottom:10px;">{module["icon"]}</div>'
+            
             st.markdown(f"""
-            <div class="module-card" style="border-top: 4px solid {module['color']}">
-                <h3>{module['icon']} {module['name']}</h3>
+            <div class="module-card" style="border-top: 4px solid {module['color']};text-align:center;">
+                {logo_display}
+                <h3>{module['name']}</h3>
                 <p>{module['description']}</p>
             </div>
             """, unsafe_allow_html=True)
