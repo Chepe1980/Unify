@@ -286,7 +286,7 @@ if app_mode == "Home":
             "name": "XuPayneVernikKachvMod",
             "description": "Rock physics modeling using Xu-Payne, Vernik-Kachanov methods",
             "color": "#d35400",
-            "logo": "Image.open("assets/hero_image.jpg")"
+            "logo": "Image.open("logoApps.png")")"
             #"logo": "modules/logos/xupayne_logo.png"
         }
     ]
