@@ -226,7 +226,7 @@ if app_mode == "Home":
     modules = [
         {
             "name": "AVAzMOD",
-            "icon": "avazmod_logo.png",
+            "icon": "🧭",
             "description": "Azimuthal Velocity Analysis for fracture characterization and Fluid Substitution in shale rocks",
             "color": "#3498db",
             "logo": "modules/logos/avazmod_logo.png"
