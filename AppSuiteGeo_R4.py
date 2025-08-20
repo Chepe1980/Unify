@@ -256,7 +256,7 @@ if app_mode == "Home":
             "name": "RockPhysics AVO & Fluid Substitution",
             "description": "This app performs rock physics modeling and AVO analysis for brine, oil, and gas scenarios",
             "color": "#f39c12",
-            "logo": "RPTlogo.png"
+            "logo": "modules/logos/RPTlogo.png"
         },
         {
             "name": "WedgeMOD",
@@ -286,7 +286,7 @@ if app_mode == "Home":
             "name": "XuPayneVernikKachvMod",
             "description": "Rock physics modeling using Xu-Payne, Vernik-Kachanov methods",
             "color": "#d35400",
-            "logo": "xupayne_logo.png"
+            "logo": "modules/logos/xupayne_logo.png"
             #"logo": "modules/logos/xupayne_logo.png"
         }
     ]
