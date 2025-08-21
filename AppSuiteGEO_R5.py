@@ -472,6 +472,6 @@ else:
 # ===========================================
 st.markdown("""
 <div class="footer">
-    © 2023 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
+    © 2025 GeoAPPS Hub | Developed by Geoscience Team | v1.0.0
 </div>
 """, unsafe_allow_html=True)
