@@ -391,7 +391,7 @@ if app_mode == "Home":
         """)
         
     with col2:
-        hero_url = f"{GITHUB_REPO_RAW_URL}hero_image.jpg"
+        hero_url = f"{GITHUB_REPO_RAW_URL}logoApps.png"
         hero_img = load_image_from_url(hero_url)
         if hero_img:
             st.image(hero_img, use_container_width=True)
