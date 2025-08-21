@@ -74,7 +74,7 @@ MODULE_CONFIG = {
         "color": "#8e44ad",
         "logo": f"{GITHUB_REPO_RAW_URL}shalerpt_logo.png"
     },
-    "XuPayneVernikKachvMod": {
+    "CarbonateRPTMod": {
         "file": "XuPayneVernikKachvMod_st.py",
         "function": "main",
         "description": "Rock physics modeling using Xu-Payne, Vernik-Kachanov methods",
