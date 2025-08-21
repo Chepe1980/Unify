@@ -14,7 +14,7 @@ import urllib.parse
 # CONFIGURATION
 # ===========================================
 # GitHub repository configuration - UPDATE THIS WITH YOUR ACTUAL REPO URL
-GITHUB_REPO_RAW_URL = "https://github.com/Chepe1980/Unify"
+GITHUB_REPO_RAW_URL = "https://raw.githubusercontent.com/Chepe1980/Unify/main/"
 
 # Module configuration with direct GitHub URLs
 MODULE_CONFIG = {
@@ -23,63 +23,63 @@ MODULE_CONFIG = {
         "function": "main",
         "description": "Azimuthal Velocity Analysis for fracture characterization and Fluid Substitution in shale rocks",
         "color": "#3498db",
-        "logo": f"{https://github.com/Chepe1980/Unify}avazmod_logo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}avazmod_logo.png"
     },
     "GeoStressMOD": {
         "file": "GeoMechApp.py", 
         "function": "main",
         "description": "Geomechanical stress analysis and modeling of Hoop Stress wellbore",
         "color": "#e74c3c",
-        "logo": f"{https://github.com/Chepe1980/Unify}geostress_logo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}geostress_logo.png"
     },
     "PasseyTOCMOD": {
         "file": "TocApp_st.py",
         "function": "main",
         "description": "Total Organic Carbon calculation using ΔLogR method of Passey´s method",
         "color": "#2ecc71",
-        "logo": f"{https://github.com/Chepe1980/Unify}passey_logo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}passey_logo.png"
     },
     "RockPhysics AVO & Fluid Substitution": {
         "file": "RPTAVOmod.py",
         "function": "main", 
         "description": "This app performs rock physics modeling and AVO analysis for brine, oil, and gas scenarios",
         "color": "#f39c12",
-        "logo": f"{https://github.com/Chepe1980/Unify}RPTlogo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}RPTlogo.png"
     },
     "WedgeMOD": {
         "file": "WedgeModV1_st.py",
         "function": "main",
         "description": "Advanced Seismic Wedge Modeling tool",
         "color": "#9b59b6",
-        "logo": f"{https://github.com/Chepe1980/Unify}wedgemod_logo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}wedgemod_logo.png"
     },
     "Machine Learning": {
         "file": "MLalgorithms.py",
         "function": "main",
         "description": "Advanced ML algorithms for geoscience applications Sonic Log Prediction",
         "color": "#1abc9c",
-        "logo": f"{https://github.com/Chepe1980/Unify}ml_logo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}ml_logo.png"
     },
     "HoopMod": {
         "file": "HoopMod_st.py",
         "function": "main",
         "description": "Hoop Stress analysis and visualization for wellbore stability",
         "color": "#16a085",
-        "logo": f"{https://github.com/Chepe1980/Unify}hoopmod_logo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}hoopmod_logo.png"
     },
     "ShaleRPTMod": {
         "file": "ShaleRPTMod_st.py",
         "function": "main",
         "description": "Shale Rock Physics Template analysis and modeling",
         "color": "#8e44ad",
-        "logo": f"{https://github.com/Chepe1980/Unify}shalerpt_logo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}shalerpt_logo.png"
     },
     "XuPayneVernikKachvMod": {
         "file": "XuPayneVernikKachvMod_st.py",
         "function": "main",
         "description": "Rock physics modeling using Xu-Payne, Vernik-Kachanov methods",
         "color": "#d35400",
-        "logo": f"{https://github.com/Chepe1980/Unify}xupayne_logo.png"
+        "logo": f"{GITHUB_REPO_RAW_URL}xupayne_logo.png"
     }
 }
 
@@ -115,7 +115,7 @@ def load_image_from_url(url: str, width: int = None) -> Image.Image:
 def download_module_from_github(module_name: str, module_info: dict) -> bool:
     """Download module from GitHub if not available locally"""
     try:
-        module_url = f"{https://github.com/Chepe1980/Unify}{module_info['file']}"
+        module_url = f"{GITHUB_REPO_RAW_URL}{module_info['file']}"
         response = requests.get(module_url)
         response.raise_for_status()
         
@@ -338,7 +338,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📊 Quick Stats")
     total_modules = len(MODULE_CONFIG)
-    available_modules = sum(1 for mod in MODULE_CONFIG.values() if Path(f"modules/{mod['file']}").exists())
+    available_modules = sum(1 for mod in MODULE_CONFIG.values() if Path("modules").exists() and Path(f"modules/{mod['file']}").exists())
     st.markdown(f"**Total Modules:** {total_modules}")
     st.markdown(f"**Available:** {available_modules}")
     
@@ -348,9 +348,9 @@ with st.sidebar:
     
     # GitHub link
     st.markdown("---")
-    st.markdown("""
+    st.markdown(f"""
     **🔗 Repository Link**  
-    [<span class='github-logo'>🐙</span>View on GitHub](https://github.com/your_username/your_repo)
+    [<span class='github-logo'>🐙</span>View on GitHub](https://github.com/Chepe1980/Unify)
     """, unsafe_allow_html=True)
     
     # About section
@@ -391,7 +391,7 @@ if app_mode == "Home":
         """)
         
     with col2:
-        hero_url = f"{https://github.com/Chepe1980/Unify}hero_image.jpg"
+        hero_url = f"{GITHUB_REPO_RAW_URL}hero_image.jpg"
         hero_img = load_image_from_url(hero_url)
         if hero_img:
             st.image(hero_img, use_column_width=True)
@@ -417,7 +417,7 @@ if app_mode == "Home":
     for idx, (module_name, module_info) in enumerate(MODULE_CONFIG.items()):
         with cols[idx % 3]:
             # Check if module exists
-            module_exists = Path(f"modules/{module_info['file']}").exists()
+            module_exists = Path("modules").exists() and Path(f"modules/{module_info['file']}").exists()
             status_icon = "✅" if module_exists else "⏳"
             
             st.markdown(f"""
