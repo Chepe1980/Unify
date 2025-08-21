@@ -472,6 +472,9 @@ else:
 # ===========================================
 st.markdown("""
 <div class="footer">
-    © 2025 GeoAPPS Hub | Developed by PhD J.A Guerrero Castro | v1.0.0
+    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <img src="https://raw.githubusercontent.com/Chepe1980/Unify/main/Bon.png" width="30" height="30">
+        <span>© 2025 GeoAPPS Hub | Developed by PhD J.A Guerrero Castro | v1.0.0</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
